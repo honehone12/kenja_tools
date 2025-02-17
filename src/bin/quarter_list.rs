@@ -79,10 +79,6 @@ async fn main() -> anyhow::Result<()> {
     let seasons = serde_json::from_str::<Vec<Season>>(&doc)?;
 
     for year in seasons {
-        if year.year == 2025 {
-            continue;
-        }
-
         for quarter in year.seasons {
             let list = request_quarter_list(
                 &http_client, 
@@ -91,6 +87,11 @@ async fn main() -> anyhow::Result<()> {
                 &quarter, 
                 INTERVAL
             ).await?;
+
+            if list.is_empty() {
+                info!("list is empty");
+                continue;
+            }
 
             let res = collection.insert_many(list).await?;
             info!("inserted {}items", res.inserted_ids.len());
