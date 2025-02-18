@@ -37,7 +37,7 @@ pub async fn request(http_client: &HttpClient, url: &str)
         ref mut v => {
             if let Some(a) = v.as_array_mut() {
                 data.append(a);
-            } else {
+            } else if !v.is_null() {
                 data.push(v.take());
             }
         }
