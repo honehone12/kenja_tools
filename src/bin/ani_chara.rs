@@ -33,6 +33,9 @@ async fn main() -> anyhow::Result<()> {
     let total = list.len();
 
     for (i, bson) in list.iter().enumerate() {
+        if i <= 4603 {
+            continue;
+        }
 
         if let Bson::Int64(mal_id) = bson {
             info!("{i}/{total}");
@@ -45,12 +48,16 @@ async fn main() -> anyhow::Result<()> {
                 Ok(res) => res
             };
 
-            let anime_chara = AnimeCharacters{
-                mal_id: *mal_id,
-                characters: data
-            };
-            _ = collection.insert_one(anime_chara).await?;
-            info!("inserted a item");
+            if data.is_empty() {
+                info!("data is empty");
+            } else {
+                let anime_chara = AnimeCharacters{
+                    mal_id: *mal_id,
+                    characters: data
+                };
+                _ = collection.insert_one(anime_chara).await?;
+                info!("inserted a item");
+            }
         } else {
             warn!("skipping unexpected value {i}/{total}:{bson}");
             continue;
