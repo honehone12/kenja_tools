@@ -33,38 +33,31 @@ async fn main() -> anyhow::Result<()> {
     let total = list.len();
 
     for (i, bson) in list.iter().enumerate() {
-        if i <= 4603 {
-            continue;
-        }
-
         if let Bson::Int64(mal_id) = bson {
             info!("{i}/{total}");
             let url = format!("{base_path}/anime/{mal_id}/characters");
-            let (data, _) = match request(&http_client, &url).await {
-                Err(e) => {
-                    warn!("request failed. {e}. skipping");
-                    continue;
+            match request(&http_client, &url).await {
+                Err(e) => warn!("request failed. {e}. skipping"),
+                Ok((data, _)) => {
+                    if data.is_empty() {
+                        info!("data is empty");
+                    } else {
+                        let anime_chara = AnimeCharacters{
+                            mal_id: *mal_id,
+                            characters: data
+                        };
+                        _ = collection.insert_one(anime_chara).await?;
+                        info!("inserted a item");
+                    }
                 }
-                Ok(res) => res
-            };
-
-            if data.is_empty() {
-                info!("data is empty");
-            } else {
-                let anime_chara = AnimeCharacters{
-                    mal_id: *mal_id,
-                    characters: data
-                };
-                _ = collection.insert_one(anime_chara).await?;
-                info!("inserted a item");
             }
         } else {
             warn!("skipping unexpected value {i}/{total}:{bson}");
-            continue;
         }
 
         time::sleep(interval).await;
     }
 
+    info!("done");
     Ok(())
 }
