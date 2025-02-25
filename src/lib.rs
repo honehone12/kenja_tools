@@ -7,6 +7,12 @@ use tracing::info;
 use anyhow::bail;
 
 #[derive(Serialize, Deserialize)]
+pub struct AnimeCharacters {
+    pub mal_id: i64,
+    pub characters: Vec<Value>
+}
+
+#[derive(Serialize, Deserialize)]
 pub struct Season {
     pub year: u32,
     pub seasons: Vec<String>

@@ -1,17 +1,10 @@
 use std::{env, time::Duration};
-use anirs_dev::request;
+use anirs_dev::{AnimeCharacters, request};
 use tokio::time;
 use mongodb::{bson::{doc, Bson}, Client as MongoClient};
 use reqwest::Client as HttpClient;
 use serde_json::Value;
 use tracing::{info, warn};
-use serde::{Serialize, Deserialize};
-
-#[derive(Serialize, Deserialize)]
-struct AnimeCharacters {
-    mal_id: i64,
-    characters: Vec<Value>
-}
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
