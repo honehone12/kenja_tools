@@ -37,36 +37,36 @@ async fn main() -> anyhow::Result<()> {
     let mut i = 0;
     let mut batch = vec![];
     while let Some(anime) = ani_list.try_next().await? {
-        let Some(ani_chara) = ani_chara_list
-            .iter()
-            .find(|ac| ac.mal_id == anime.mal_id) 
-        else {
-            debug!("could not find anime mal_id:{}", anime.mal_id);
-            continue;
-        };
-
         let mut characters = vec![];
-        for c in ani_chara.characters.iter() {
-            let Some(chara_props) = c["character"].as_object() else {
-                warn!("unexpected property [character]");
-                continue;
-            };
-            
-            let Some(chara_mal_id) = chara_props["mal_id"].as_i64() else {
-                warn!("unexpected property [mal_id]");
-                continue;
-            };
-
-            let Some(chara) = chara_list
-                .iter()
-                .find(|c| c.mal_id == chara_mal_id)
-            else {
-                debug!("could not find character:mal_id {chara_mal_id}");
-                continue;
-            };
-
-            characters.push(chara.clone());
-        }
+        
+        if let Some(ani_chara) = ani_chara_list
+            .iter()
+            .find(|ac| ac.mal_id == anime.mal_id)
+        {
+            for c in ani_chara.characters.iter() {
+                let Some(chara_props) = c["character"].as_object() else {
+                    warn!("unexpected property [character]");
+                    continue;
+                };
+                
+                let Some(chara_mal_id) = chara_props["mal_id"].as_i64() else {
+                    warn!("unexpected property [mal_id]");
+                    continue;
+                };
+    
+                let Some(chara) = chara_list
+                    .iter()
+                    .find(|c| c.mal_id == chara_mal_id)
+                else {
+                    debug!("could not find character:mal_id {chara_mal_id}");
+                    continue;
+                };
+    
+                characters.push(chara.clone());
+            }
+        } else {
+            debug!("could not find anime mal_id:{}", anime.mal_id);
+        };
 
         let anime_text = AnimeText{
             anime,
