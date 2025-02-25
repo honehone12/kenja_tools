@@ -6,13 +6,36 @@ use reqwest::{Client as HttpClient, StatusCode};
 use tracing::info;
 use anyhow::bail;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct AnimeText {
+    pub anime: AnimeSimple,
+    pub characters: Vec<CharacterSimple>
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct CharacterSimple {
+    pub mal_id: i64,
+    pub name: Option<String>,
+    pub name_kanji: Option<String>,
+    pub about: Option<String>
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct AnimeSimple {
+    pub mal_id: i64,
+    pub title: Option<String>,
+    pub title_english: Option<String>,
+    pub title_japanese: Option<String>,
+    pub synopsis: Option<String>
+}
+
+#[derive(Serialize, Deserialize, Debug)]
 pub struct AnimeCharacters {
     pub mal_id: i64,
     pub characters: Vec<Value>
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Season {
     pub year: u32,
     pub seasons: Vec<String>
