@@ -14,13 +14,14 @@ async fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt().init();
     dotenvy::dotenv()?;
 
+    let rating = "all_ages";
     let mongo_uri = env::var("MONGO_URI")?;
     let mongo_client = MongoClient::with_uri_str(mongo_uri).await?;
     let db = mongo_client.database("anime");
-    let ani_colle = db.collection::<AnimeSimple>("anime_all_ages");
+    let ani_colle = db.collection::<AnimeSimple>(&format!("anime_{rating}"));
     let ani_chara_colle = db.collection::<AnimeCharacters>("anime_chara");
     let chara_colle = db.collection::<CharacterSimple>("chara");
-    let ani_text_colle = db.collection::<AnimeText>("anime_text_all_ages"); 
+    let ani_text_colle = db.collection::<AnimeText>(&format!("anime_text_{rating}")); 
 
     info!("getting anime list...");
     let mut ani_list = ani_colle.find(doc! {}).await?;
