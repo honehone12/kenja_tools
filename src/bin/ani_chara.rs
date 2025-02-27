@@ -1,5 +1,5 @@
 use std::{env, time::Duration};
-use anirs_dev::{AnimeCharacters, request};
+use kenja_tools::{AnimeCharacters, request};
 use tokio::time;
 use mongodb::{bson::{doc, Bson}, Client as MongoClient};
 use reqwest::Client as HttpClient;

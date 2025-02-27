@@ -1,6 +1,6 @@
 use std::env;
 use futures::stream::TryStreamExt;
-use anirs_dev::{
+use kenja_tools::{
     AnimeCharacters, 
     AnimeSimple, 
     AnimeText, 

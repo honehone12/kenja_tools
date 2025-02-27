@@ -1,6 +1,6 @@
 use std::{env, time::Duration};
 use tokio::time;
-use anirs_dev::{AnimeCharacters, request};
+use kenja_tools::{AnimeCharacters, request};
 use mongodb::{bson::{doc, Bson}, Client as MongoClient};
 use serde_json::Value;
 use reqwest::Client as HttpClient;

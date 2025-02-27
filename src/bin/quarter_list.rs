@@ -4,7 +4,7 @@ use mongodb::Client as MongoClient;
 use serde_json::Value;
 use tokio::fs;
 use tracing::info;
-use anirs_dev::{Season, request_pages};
+use kenja_tools::{Season, request_pages};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
