@@ -28,7 +28,7 @@ pub(crate) struct AiredPeriod {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
-pub(crate) struct AnimeSimpleDocument {
+pub(crate) struct AnimeDocument {
     pub(crate) mal_id: i64,
     pub(crate) url: String,
     #[serde(rename = "type")]
@@ -36,16 +36,16 @@ pub(crate) struct AnimeSimpleDocument {
     pub(crate) aired: AiredPeriod,
     pub(crate) title: String,
     pub(crate) title_english: Option<String>,
-    pub(crate) title_japanese: Option<String>,
+    pub(crate) title_japanese: String,
     pub(crate) synopsis: Option<String>
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
-pub(crate) struct CharacterSimpleDocument {
+pub(crate) struct CharacterDocument {
     pub(crate) mal_id: i64,
     pub(crate) url: String,
     pub(crate) name: String,
-    pub(crate) name_kanji: Option<String>,
+    pub(crate) name_kanji: String,
     pub(crate) about: Option<String>
 }
 
@@ -60,7 +60,33 @@ pub(crate) struct CharacterCast {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
-pub(crate) struct AnimeCharacters {
+pub(crate) struct AniCharaDocument {
     pub(crate) mal_id: i64,
     pub(crate) characters: Vec<CharacterCast>
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub(crate) enum DocumentType {
+    #[serde(rename = "anime")]
+    Anime,
+    #[serde(rename = "character")]
+    Character
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub(crate) struct FlatDocument {
+    pub(crate) mal_id: i64,
+    pub(crate) doc_type: DocumentType,
+    pub(crate) url: String,
+    pub(crate) name: String,
+    pub(crate) name_english: Option<String>,
+    pub(crate) name_japanese: String,
+    pub(crate) description: Option<String>
+}
+
+pub(crate) fn is_expected_media_type(media_type: &str) -> bool {
+    match media_type {
+        "TV" | "Movie" | "OVA" | "ONA" => true,
+        _ => false
+    }
 }
