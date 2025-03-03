@@ -7,7 +7,8 @@ use super::{
     AniCharaBridge, 
     AnimeDocument, 
     CharacterDocument, 
-    FlatDocument, 
+    FlatDocument,
+    Metadata, 
     DocumentType,
     Rating,
     is_expected_media_type
@@ -26,7 +27,10 @@ pub(crate) async fn flatten_main(rating: Rating, db: Database)
     );
 
     info!("obtaining anime documents...");
-    let mut ani_stream = ani_colle.find(doc! {}).await?;
+    let mut ani_list = ani_colle
+        .find(doc! {}).await?
+        .try_collect::<Vec<AnimeDocument>>().await?;
+    ani_list.sort_unstable_by_key(|d| d.mal_id);
     info!("obtaining anime-character bridge...");
     let mut ani_chara_list = ani_chara_colle
         .find(doc! {}).await?
@@ -43,7 +47,8 @@ pub(crate) async fn flatten_main(rating: Rating, db: Database)
 
     info!("start flattening");
     let mut batch = vec![];
-    while let Some(anime) = ani_stream.try_next().await? {
+    let mut inserted_chara_list = vec![];
+    for anime in  ani_list {
         match anime.aired.from {
             Some(s) => {
                 let date = NaiveDate::parse_from_str(&s, &chrono_fmt)?;
@@ -62,16 +67,6 @@ pub(crate) async fn flatten_main(rating: Rating, db: Database)
             } 
             None => continue
         }
-        
-        batch.push(FlatDocument{
-            mal_id: anime.mal_id,
-            doc_type: DocumentType::Anime,
-            url: anime.url,
-            name: anime.title,
-            name_english: anime.title_english,
-            name_japanese: anime.title_japanese,
-            description: anime.synopsis,
-        });
 
         if let Some(idx) = ani_chara_list
             .iter_mut()
@@ -87,17 +82,42 @@ pub(crate) async fn flatten_main(rating: Rating, db: Database)
                 };
 
                 let chara = chara_list.remove(idx);
+                if inserted_chara_list.contains(&chara.mal_id) {
+                    continue;
+                }
+                
                 batch.push(FlatDocument{
                     mal_id: chara.mal_id,
-                    doc_type: DocumentType::Character,
                     url: chara.url,
+                    meta: Metadata{
+                        doc_type: DocumentType::Character,
+                        parent_mal_id: Some(anime.mal_id),
+                        parent_name: Some(anime.title.clone()),
+                        parent_name_japanese: anime.title_japanese.clone()
+                    },
                     name: chara.name,
                     name_english: None,
                     name_japanese: chara.name_kanji,
                     description: chara.about,
                 });
+                inserted_chara_list.push(chara.mal_id);
             }
         }
+
+        batch.push(FlatDocument{
+            mal_id: anime.mal_id,
+            url: anime.url,
+            meta: Metadata{
+                doc_type: DocumentType::Anime,
+                parent_mal_id: None,
+                parent_name: None,
+                parent_name_japanese: None,
+            },
+            name: anime.title,
+            name_english: anime.title_english,
+            name_japanese: anime.title_japanese,
+            description: anime.synopsis,
+        });
 
         if batch.len() >= 100 {
             let result = flat_colle.insert_many(&batch).await?;
