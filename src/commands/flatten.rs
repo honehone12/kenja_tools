@@ -1,9 +1,8 @@
 use anyhow::bail;
-use bson::doc;
 use chrono::NaiveDate;
 use futures::TryStreamExt;
-use mongodb::Database;
-use tracing::info;
+use mongodb::{Database, bson::doc};
+use tracing::{info, warn};
 use crate::commands::is_expected_media_type;
 
 use super::{
@@ -17,6 +16,7 @@ use super::{
 
 pub(crate) async fn flatten_main(rating: Rating, db: Database) 
 -> anyhow::Result<()> {
+
     let ani_colle = db.collection::<AnimeDocument>(
         &format!("anime_{}", rating.to_string())
     );
@@ -37,18 +37,31 @@ pub(crate) async fn flatten_main(rating: Rating, db: Database)
         .find(doc! {}).await?
         .try_collect::<Vec<CharacterDocument>>().await?;
 
+    let chrono_fmt = "%Y-%m-%dT%H:%M:%S%z";
     let Some(oldest) = NaiveDate::from_yo_opt(1965, 1) else {
         bail!("could not find a day on the calendar");
     };
 
+    info!("start flattening");
     let mut batch = vec![];
     while let Some(anime) = ani_stream.try_next().await? {
-        if anime.aired.from.date_naive() < oldest {
-            continue;
+        match anime.aired.from {
+            Some(s) => {
+                let date = NaiveDate::parse_from_str(&s, &chrono_fmt)?;
+                if date < oldest {
+                    continue;
+                }
+            }
+            None => continue
         }
 
-        if !is_expected_media_type(&anime.media_type) {
-            continue;
+        match anime.media_type {
+            Some(s) => {
+                if !is_expected_media_type(&s) {
+                    continue;
+                }
+            } 
+            None => continue
         }
         
         batch.push(FlatDocument{
@@ -94,8 +107,10 @@ pub(crate) async fn flatten_main(rating: Rating, db: Database)
         }
     }
     
-    let result = flat_colle.insert_many(&batch).await?;
-    info!("inserted {}items", result.inserted_ids.len());
+    if !batch.is_empty() {
+        let result = flat_colle.insert_many(&batch).await?;
+        info!("inserted {}items", result.inserted_ids.len());
+    }
     info!("done");
     Ok(())
 }

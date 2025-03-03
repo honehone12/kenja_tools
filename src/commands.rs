@@ -3,8 +3,6 @@ pub(crate) mod flatten;
 use std::fmt::{Display, Formatter, Result};
 use clap::ValueEnum;
 use serde::{Deserialize, Serialize};
-use chrono::{DateTime, Utc};
-use bson::serde_helpers::chrono_datetime_as_bson_datetime;
 
 #[derive(ValueEnum, Clone, Debug)]
 pub(crate)  enum Rating {
@@ -23,8 +21,7 @@ impl Display for Rating {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub(crate) struct AiredPeriod {
-    #[serde(with = "chrono_datetime_as_bson_datetime")]
-    pub(crate) from: DateTime<Utc>
+    pub(crate) from: Option<String>
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -32,11 +29,11 @@ pub(crate) struct AnimeDocument {
     pub(crate) mal_id: i64,
     pub(crate) url: String,
     #[serde(rename = "type")]
-    pub(crate) media_type: String,
+    pub(crate) media_type: Option<String>,
     pub(crate) aired: AiredPeriod,
     pub(crate) title: String,
     pub(crate) title_english: Option<String>,
-    pub(crate) title_japanese: String,
+    pub(crate) title_japanese: Option<String>,
     pub(crate) synopsis: Option<String>
 }
 
@@ -45,7 +42,7 @@ pub(crate) struct CharacterDocument {
     pub(crate) mal_id: i64,
     pub(crate) url: String,
     pub(crate) name: String,
-    pub(crate) name_kanji: String,
+    pub(crate) name_kanji: Option<String>,
     pub(crate) about: Option<String>
 }
 
@@ -80,7 +77,7 @@ pub(crate) struct FlatDocument {
     pub(crate) url: String,
     pub(crate) name: String,
     pub(crate) name_english: Option<String>,
-    pub(crate) name_japanese: String,
+    pub(crate) name_japanese: Option<String>,
     pub(crate) description: Option<String>
 }
 
