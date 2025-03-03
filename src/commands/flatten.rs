@@ -2,16 +2,15 @@ use anyhow::bail;
 use chrono::NaiveDate;
 use futures::TryStreamExt;
 use mongodb::{Database, bson::doc};
-use tracing::{info, warn};
-use crate::commands::is_expected_media_type;
-
+use tracing::info;
 use super::{
     AniCharaBridge, 
     AnimeDocument, 
     CharacterDocument, 
     FlatDocument, 
     DocumentType,
-    Rating
+    Rating,
+    is_expected_media_type
 };
 
 pub(crate) async fn flatten_main(rating: Rating, db: Database) 
