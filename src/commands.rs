@@ -60,7 +60,7 @@ pub(crate) struct CharacterCast {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
-pub(crate) struct AniCharaDocument {
+pub(crate) struct AniCharaBridge {
     pub(crate) mal_id: i64,
     pub(crate) characters: Vec<CharacterCast>
 }

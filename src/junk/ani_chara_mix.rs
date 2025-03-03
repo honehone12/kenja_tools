@@ -66,7 +66,7 @@ pub(crate) async fn ani_chara_mix_main() -> anyhow::Result<()> {
             }
         } else {
             debug!("could not find anime mal_id:{}", anime.mal_id);
-        };
+        }
 
         let anime_text = AnimeText{
             anime,
