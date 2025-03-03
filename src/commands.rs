@@ -1,3 +1,5 @@
+pub(crate) mod flatten;
+
 use std::time::Duration;
 use tokio::time;
 use serde::{Serialize, Deserialize};

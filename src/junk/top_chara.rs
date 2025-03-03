@@ -1,13 +1,12 @@
 use std::{env, time::Duration};
 use tokio::time;
-use kenja_tools::{paged_url, request};
+use super::{paged_url, request};
 use mongodb::Client as MongoClient;
 use reqwest::Client as HttpClient;
 use serde_json::Value;
 use tracing::info;
 
-#[tokio::main]
-async fn main() -> anyhow::Result<()> {
+pub(crate) async fn top_chara_main() -> anyhow::Result<()> {
     tracing_subscriber::fmt().init();
     dotenvy::dotenv()?;
 

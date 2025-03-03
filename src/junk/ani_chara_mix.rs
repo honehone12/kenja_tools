@@ -1,6 +1,6 @@
 use std::env;
 use futures::stream::TryStreamExt;
-use kenja_tools::{
+use super::{
     AnimeCharacters, 
     AnimeSimple, 
     AnimeText, 
@@ -9,8 +9,7 @@ use kenja_tools::{
 use mongodb::{bson::doc, Client as MongoClient};
 use tracing::{debug, info, warn};
 
-#[tokio::main]
-async fn main() -> anyhow::Result<()> {
+pub(crate) async fn ani_chara_mix_main() -> anyhow::Result<()> {
     tracing_subscriber::fmt().init();
     dotenvy::dotenv()?;
 

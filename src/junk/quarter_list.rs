@@ -4,10 +4,9 @@ use mongodb::Client as MongoClient;
 use serde_json::Value;
 use tokio::fs;
 use tracing::info;
-use kenja_tools::{Season, request_pages};
+use super::{Season, request_pages};
 
-#[tokio::main]
-async fn main() -> anyhow::Result<()> {
+pub(crate) async fn quarter_list_main() -> anyhow::Result<()> {
     tracing_subscriber::fmt().init();
     dotenvy::dotenv()?;
     

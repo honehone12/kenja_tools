@@ -1,13 +1,12 @@
 use std::{env, time::Duration};
-use kenja_tools::{AnimeCharacters, request};
+use super::{AnimeCharacters, request};
 use tokio::time;
 use mongodb::{bson::{doc, Bson}, Client as MongoClient};
 use reqwest::Client as HttpClient;
 use serde_json::Value;
 use tracing::{info, warn};
 
-#[tokio::main]
-async fn main() -> anyhow::Result<()> {
+pub(crate) async fn ani_chara_main() -> anyhow::Result<()> {
     tracing_subscriber::fmt().init();
     dotenvy::dotenv()?;
 
