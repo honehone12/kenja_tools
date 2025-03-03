@@ -1,4 +1,6 @@
-pub(crate)  async fn flatten_main() -> anyhow::Result<()> {
+use super::Rating;
+
+pub(crate)  async fn flatten_main(rating: Rating) -> anyhow::Result<()> {
     
     
     Ok(())

@@ -1,7 +1,7 @@
 mod commands;
 
-use clap::Parser;
-use clap::{Subcommand, ValueEnum};
+use clap::{Parser, Subcommand};
+use commands::{flatten::flatten_main, Rating};
 
 #[derive(Parser)]
 #[command(version)]
@@ -18,21 +18,14 @@ enum Command {
     }
 }
 
-#[derive(ValueEnum, Clone, Debug)]
-enum Rating {
-    AllAges,
-    Hentai
-}
-
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt().init();
     dotenvy::dotenv()?;
     let cli = Cli::parse();
+    
     match cli.command {
-        Command::Flatten { rating } => {
-            
-        }
+        Command::Flatten { rating } => flatten_main(rating).await?
     }
     
     Ok(())
