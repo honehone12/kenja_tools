@@ -1,6 +1,6 @@
 pub(crate) mod flatten;
 
-use std::fmt::{Display, Formatter, Result};
+use std::fmt::{Display, Formatter, Result as FmtResult};
 use clap::ValueEnum;
 use serde::{Deserialize, Serialize};
 
@@ -11,7 +11,7 @@ pub(crate)  enum Rating {
 }
 
 impl Display for Rating {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         match self {
             Rating::AllAges => f.write_str("all_ages"),
             Rating::Hentai => f.write_str("hentai")
