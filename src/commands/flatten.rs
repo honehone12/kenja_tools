@@ -8,7 +8,6 @@ use super::{
     AnimeDocument, 
     CharacterDocument, 
     FlatDocument,
-    DocumentType,
     Parent,
     Rating,
     is_expected_media_type
@@ -89,7 +88,6 @@ pub(crate) async fn flatten_main(rating: Rating, db: Database)
                 batch.push(FlatDocument{
                     mal_id: chara.mal_id,
                     url: chara.url,
-                    doc_type: DocumentType::Character,
                     parent: Some(Parent{
                         mal_id: anime.mal_id,
                         name: anime.title.clone(),
@@ -107,7 +105,6 @@ pub(crate) async fn flatten_main(rating: Rating, db: Database)
         batch.push(FlatDocument{
             mal_id: anime.mal_id,
             url: anime.url,
-            doc_type: DocumentType::Anime,
             parent: None,
             name: anime.title,
             name_english: anime.title_english,
