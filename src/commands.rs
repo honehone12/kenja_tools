@@ -63,14 +63,6 @@ pub(crate) struct AniCharaBridge {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
-pub(crate) struct Metadata {
-    pub(crate) doc_type: DocumentType,
-    pub(crate) parent_mal_id: Option<i64>,
-    pub(crate) parent_name: Option<String>,
-    pub(crate) parent_name_japanese: Option<String>
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
 pub(crate) enum DocumentType {
     #[serde(rename = "anime")]
     Anime,
@@ -82,10 +74,13 @@ pub(crate) enum DocumentType {
 pub(crate) struct FlatDocument {
     pub(crate) mal_id: i64,
     pub(crate) url: String,
-    pub(crate) meta: Metadata,
+    pub(crate) doc_type: DocumentType,
     pub(crate) name: String,
     pub(crate) name_english: Option<String>,
     pub(crate) name_japanese: Option<String>,
+    pub(crate) parent_mal_id: Option<i64>,
+    pub(crate) parent_name: Option<String>,
+    pub(crate) parent_name_japanese: Option<String>,
     pub(crate) description: Option<String>
 }
 

@@ -8,7 +8,6 @@ use super::{
     AnimeDocument, 
     CharacterDocument, 
     FlatDocument,
-    Metadata, 
     DocumentType,
     Rating,
     is_expected_media_type
@@ -89,15 +88,13 @@ pub(crate) async fn flatten_main(rating: Rating, db: Database)
                 batch.push(FlatDocument{
                     mal_id: chara.mal_id,
                     url: chara.url,
-                    meta: Metadata{
-                        doc_type: DocumentType::Character,
-                        parent_mal_id: Some(anime.mal_id),
-                        parent_name: Some(anime.title.clone()),
-                        parent_name_japanese: anime.title_japanese.clone()
-                    },
+                    doc_type: DocumentType::Character,
                     name: chara.name,
                     name_english: None,
                     name_japanese: chara.name_kanji,
+                    parent_mal_id: Some(anime.mal_id),
+                    parent_name: Some(anime.title.clone()),
+                    parent_name_japanese: anime.title_japanese.clone(),
                     description: chara.about,
                 });
                 inserted_chara_list.push(chara.mal_id);
@@ -107,15 +104,13 @@ pub(crate) async fn flatten_main(rating: Rating, db: Database)
         batch.push(FlatDocument{
             mal_id: anime.mal_id,
             url: anime.url,
-            meta: Metadata{
-                doc_type: DocumentType::Anime,
-                parent_mal_id: None,
-                parent_name: None,
-                parent_name_japanese: None,
-            },
+            doc_type: DocumentType::Anime,
             name: anime.title,
             name_english: anime.title_english,
             name_japanese: anime.title_japanese,
+            parent_mal_id: None,
+            parent_name: None,
+            parent_name_japanese: None,
             description: anime.synopsis,
         });
 
