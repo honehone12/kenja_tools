@@ -34,6 +34,7 @@ pub(crate) struct AnimeDocument {
     pub(crate) title: String,
     pub(crate) title_english: Option<String>,
     pub(crate) title_japanese: Option<String>,
+    pub(crate) title_synonyms: Vec<String>,
     pub(crate) synopsis: Option<String>
 }
 
@@ -43,6 +44,7 @@ pub(crate) struct CharacterDocument {
     pub(crate) url: String,
     pub(crate) name: String,
     pub(crate) name_kanji: Option<String>,
+    pub(crate) nicknames: Vec<String>,
     pub(crate) about: Option<String>
 }
 
@@ -77,6 +79,7 @@ pub(crate) struct FlatDocument {
     pub(crate) name: String,
     pub(crate) name_english: Option<String>,
     pub(crate) name_japanese: Option<String>,
+    pub(crate) aliases: Vec<String>,
     pub(crate) description: Option<String>
 }
 

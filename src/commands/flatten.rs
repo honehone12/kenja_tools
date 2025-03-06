@@ -96,6 +96,7 @@ pub(crate) async fn flatten_main(rating: Rating, db: Database)
                     name: chara.name,
                     name_english: None,
                     name_japanese: chara.name_kanji,
+                    aliases: chara.nicknames,
                     description: chara.about,
                 });
                 inserted_chara_list.push(chara.mal_id);
@@ -109,6 +110,7 @@ pub(crate) async fn flatten_main(rating: Rating, db: Database)
             name: anime.title,
             name_english: anime.title_english,
             name_japanese: anime.title_japanese,
+            aliases: anime.title_synonyms,
             description: anime.synopsis,
         });
 
