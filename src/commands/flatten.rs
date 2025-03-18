@@ -10,7 +10,7 @@ use crate::{
         anime::{
             AniCharaBridge, AnimeDocument, CharacterDocument, 
         }, 
-        FlatDocument, ItemId, ItemType, Parent, Tag, TagType
+        FlatDocument, ItemId, ItemType, Parent
     }
 };
 
@@ -114,28 +114,21 @@ pub(crate) async fn flatten_main(rating: Rating, mongo_client: MongoClient)
         }
 
         let mut tags = vec![];
-        tags.push(Tag{
-            name: media_type,
-            tag_type: TagType::Normal
-        });
+        tags.push(media_type);
         tags.push(match anime.season {
-            Some(s) => Tag{ 
-                name: format!("{year} {s}"), 
-                tag_type: TagType::Normal 
+            Some(s) => {
+                match s.as_str() {
+                    "winter" | "Winter" => format!("{year} Winter"),
+                    "spring" | "Spring" => format!("{year} Spring"),
+                    "summer" | "Summer" => format!("{year} Summer"),
+                    "fall" | "Fall" => format!("{year} Fall"),
+                    _ => year.to_string()
+                }
             },
-            None => Tag{
-                name: format!("{year}"),
-                tag_type: TagType::Normal
-            }
+            None => year.to_string()
         });
-        anime.genres.into_iter().for_each(|g| tags.push(Tag{ 
-            name: g.name, 
-            tag_type: TagType::Normal 
-        }));
-        anime.themes.into_iter().for_each(|g| tags.push(Tag{ 
-            name: g.name, 
-            tag_type: TagType::Normal 
-        }));
+        anime.genres.into_iter().for_each(|g| tags.push(g.name));
+        anime.themes.into_iter().for_each(|g| tags.push(g.name));
         batch.push(FlatDocument{
             item_id: ItemId{
                 id: anime.mal_id,

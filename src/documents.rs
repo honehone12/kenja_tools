@@ -23,27 +23,12 @@ pub(crate) struct Parent {
     pub(crate) name_japanese: Option<String>
 }
 
-#[derive(Serialize_repr, Deserialize_repr, Clone, Debug)]
-#[repr(i32)]
-pub(crate) enum TagType {
-    Normal,
-    Spoiler,
-    Sinsi,
-    Syukujo
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub(crate) struct Tag {
-    pub(crate) name: String,
-    pub(crate) tag_type: TagType
-}
-
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub(crate) struct FlatDocument {
     pub(crate) item_id: ItemId,
     pub(crate) url: String,
     pub(crate) parent: Option<Parent>,
-    pub(crate) tags: Vec<Tag>,
+    pub(crate) tags: Vec<String>,
     pub(crate) name: String,
     pub(crate) name_english: Option<String>,
     pub(crate) name_japanese: Option<String>,
