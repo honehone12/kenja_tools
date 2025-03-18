@@ -3,14 +3,14 @@ use chrono::NaiveDate;
 use futures::TryStreamExt;
 use mongodb::{Database, bson::doc};
 use tracing::info;
-use super::{
-    AniCharaBridge, 
-    AnimeDocument, 
-    CharacterDocument, 
-    FlatDocument,
-    Parent,
-    Rating,
-    is_expected_media_type
+use crate::{
+    commands::{Rating, is_expected_media_type},
+    documents::{
+        FlatDocument, Parent,
+        anime::{
+            AniCharaBridge, AnimeDocument, CharacterDocument, 
+        }
+    }
 };
 
 pub(crate) async fn flatten_main(rating: Rating, db: Database) 

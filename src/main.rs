@@ -1,4 +1,5 @@
 mod commands;
+mod documents;
 
 use std::env;
 use clap::{Parser, Subcommand};
