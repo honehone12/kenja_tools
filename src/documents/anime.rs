@@ -6,6 +6,11 @@ pub(crate) struct AiredPeriod {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
+pub(crate) struct Genre {
+    pub(crate) name: String
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub(crate) struct AnimeDocument {
     pub(crate) mal_id: i64,
     pub(crate) url: String,
@@ -17,7 +22,9 @@ pub(crate) struct AnimeDocument {
     pub(crate) title_japanese: Option<String>,
     pub(crate) title_synonyms: Vec<String>,
     pub(crate) synopsis: Option<String>,
-    pub(crate) season: Option<String>
+    pub(crate) season: Option<String>,
+    pub(crate) genres: Vec<Genre>,
+    pub(crate) themes: Vec<Genre>
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]

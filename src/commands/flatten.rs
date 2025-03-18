@@ -1,5 +1,4 @@
 use std::vec;
-
 use anyhow::bail;
 use chrono::{Datelike, NaiveDate};
 use futures::TryStreamExt;
@@ -11,7 +10,7 @@ use crate::{
         anime::{
             AniCharaBridge, AnimeDocument, CharacterDocument, 
         }, 
-        ItemId, ItemType, FlatDocument, Parent
+        FlatDocument, ItemId, ItemType, Parent, Tag, TagType
     }
 };
 
@@ -115,11 +114,28 @@ pub(crate) async fn flatten_main(rating: Rating, mongo_client: MongoClient)
         }
 
         let mut tags = vec![];
-        tags.push(media_type);
-        tags.push(match anime.season {
-            Some(s) => format!("{year} {s}"),
-            None => format!("{year}")
+        tags.push(Tag{
+            name: media_type,
+            tag_type: TagType::Normal
         });
+        tags.push(match anime.season {
+            Some(s) => Tag{ 
+                name: format!("{year} {s}"), 
+                tag_type: TagType::Normal 
+            },
+            None => Tag{
+                name: format!("{year}"),
+                tag_type: TagType::Normal
+            }
+        });
+        anime.genres.into_iter().for_each(|g| tags.push(Tag{ 
+            name: g.name, 
+            tag_type: TagType::Normal 
+        }));
+        anime.themes.into_iter().for_each(|g| tags.push(Tag{ 
+            name: g.name, 
+            tag_type: TagType::Normal 
+        }));
         batch.push(FlatDocument{
             item_id: ItemId{
                 id: anime.mal_id,
