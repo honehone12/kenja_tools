@@ -1,39 +1,44 @@
+use std::vec;
+
 use anyhow::bail;
-use chrono::NaiveDate;
+use chrono::{Datelike, NaiveDate};
 use futures::TryStreamExt;
-use mongodb::{Database, bson::doc};
+use mongodb::{bson::doc, Client as MongoClient};
 use tracing::info;
 use crate::{
-    commands::{Rating, is_expected_media_type},
+    commands::{is_expected_media_type, Rating},
     documents::{
-        FlatDocument, Parent,
         anime::{
             AniCharaBridge, AnimeDocument, CharacterDocument, 
-        }
+        }, 
+        ItemId, ItemType, FlatDocument, Parent
     }
 };
 
-pub(crate) async fn flatten_main(rating: Rating, db: Database) 
+pub(crate) async fn flatten_main(rating: Rating, mongo_client: MongoClient) 
 -> anyhow::Result<()> {
 
-    let ani_colle = db.collection::<AnimeDocument>(
+    let source_db = mongo_client.database("anime");
+    let dest_db = mongo_client.database("anime_search");
+
+    let ani_colle = source_db.collection::<AnimeDocument>(
         &format!("anime_{}", rating.to_string())
     );
-    let ani_chara_colle = db.collection::<AniCharaBridge>("anime_chara");
-    let chara_colle = db.collection::<CharacterDocument>("chara");
-    let flat_colle = db.collection::<FlatDocument>(
-        &format!("flat_ani_chara_{}", rating.to_string())
-    );
+    let ani_chara_colle = source_db.collection::<AniCharaBridge>("anime_chara");
+    let chara_colle = source_db.collection::<CharacterDocument>("chara");
+    let flat_colle = dest_db.collection::<FlatDocument>(&rating.to_string());
 
     info!("obtaining anime documents...");
     let mut ani_list = ani_colle
         .find(doc! {}).await?
         .try_collect::<Vec<AnimeDocument>>().await?;
     ani_list.sort_unstable_by_key(|d| d.mal_id);
+    
     info!("obtaining anime-character bridge...");
     let mut ani_chara_list = ani_chara_colle
         .find(doc! {}).await?
         .try_collect::<Vec<AniCharaBridge>>().await?;
+
     info!("obtaining character documents...");
     let mut chara_list = chara_colle
         .find(doc! {}).await?
@@ -48,24 +53,26 @@ pub(crate) async fn flatten_main(rating: Rating, db: Database)
     let mut batch = vec![];
     let mut inserted_chara_list = vec![];
     for anime in  ani_list {
-        match anime.aired.from {
+        let year = match anime.aired.from {
             Some(s) => {
                 let date = NaiveDate::parse_from_str(&s, &chrono_fmt)?;
                 if date < oldest {
                     continue;
                 }
+                date.year()
             }
             None => continue
-        }
+        };
 
-        match anime.media_type {
+        let media_type = match anime.media_type {
             Some(s) => {
                 if !is_expected_media_type(&s) {
                     continue;
                 }
+                s
             } 
             None => continue
-        }
+        };
 
         if let Some(idx) = ani_chara_list
             .iter_mut()
@@ -86,13 +93,17 @@ pub(crate) async fn flatten_main(rating: Rating, db: Database)
                 }
                 
                 batch.push(FlatDocument{
-                    mal_id: chara.mal_id,
+                    item_id: ItemId { 
+                        id: chara.mal_id, 
+                        document_type: ItemType::Character 
+                    },
                     url: chara.url,
                     parent: Some(Parent{
-                        mal_id: anime.mal_id,
+                        id: anime.mal_id,
                         name: anime.title.clone(),
                         name_japanese: anime.title_japanese.clone(),
                     }),
+                    tags: vec![],
                     name: chara.name,
                     name_english: None,
                     name_japanese: chara.name_kanji,
@@ -103,10 +114,20 @@ pub(crate) async fn flatten_main(rating: Rating, db: Database)
             }
         }
 
+        let mut tags = vec![];
+        tags.push(media_type);
+        tags.push(match anime.season {
+            Some(s) => format!("{year} {s}"),
+            None => format!("{year}")
+        });
         batch.push(FlatDocument{
-            mal_id: anime.mal_id,
+            item_id: ItemId{
+                id: anime.mal_id,
+                document_type: ItemType::Anime
+            },
             url: anime.url,
             parent: None,
+            tags, 
             name: anime.title,
             name_english: anime.title_english,
             name_japanese: anime.title_japanese,

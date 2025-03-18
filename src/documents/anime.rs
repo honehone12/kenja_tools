@@ -16,7 +16,8 @@ pub(crate) struct AnimeDocument {
     pub(crate) title_english: Option<String>,
     pub(crate) title_japanese: Option<String>,
     pub(crate) title_synonyms: Vec<String>,
-    pub(crate) synopsis: Option<String>
+    pub(crate) synopsis: Option<String>,
+    pub(crate) season: Option<String>
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]

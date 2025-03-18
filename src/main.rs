@@ -29,10 +29,11 @@ async fn main() -> anyhow::Result<()> {
 
     let mongo_uri = env::var("MONGO_URI")?;
     let mongo_client = MongoClient::with_uri_str(mongo_uri).await?;
-    let db = mongo_client.database("anime");
 
     match cli.command {
-        Command::Flatten { rating } => flatten_main(rating, db).await?
+        Command::Flatten { rating } => {
+            flatten_main(rating, mongo_client).await?
+        }
     }
     
     Ok(())
