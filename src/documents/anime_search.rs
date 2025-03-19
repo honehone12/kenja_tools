@@ -3,7 +3,7 @@ use serde_repr::{Serialize_repr, Deserialize_repr};
 
 #[derive(Serialize_repr, Deserialize_repr, Clone, Copy, Debug)]
 #[repr(i32)]
-pub(crate) enum DocumentType {
+pub(crate) enum ItemType {
     Anime = 1,
     Character = 2
 }
@@ -11,7 +11,7 @@ pub(crate) enum DocumentType {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub(crate) struct ItemId {
     pub(crate) id: i64,
-    pub(crate) document_type: DocumentType
+    pub(crate) item_type: ItemType
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
