@@ -9,7 +9,7 @@ pub(crate) enum ItemType {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
-pub(crate) struct ItemId {
+pub(crate) struct DocumentType {
     pub(crate) id: i64,
     pub(crate) document_type: ItemType
 }
@@ -23,7 +23,7 @@ pub(crate) struct Parent {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub(crate) struct FlatDocument {
-    pub(crate) item_id: ItemId,
+    pub(crate) item_id: DocumentType,
     pub(crate) url: String,
     pub(crate) parent: Option<Parent>,
     pub(crate) tags: Vec<String>,
