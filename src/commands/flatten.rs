@@ -5,12 +5,15 @@ use futures::TryStreamExt;
 use mongodb::{bson::doc, Client as MongoClient};
 use tracing::info;
 use crate::{
-    commands::{is_expected_media_type, Rating},
+    commands::Rating,
     documents::{
+        is_expected_media_type,
         anime::{
             AniCharaBridge, AnimeDocument, CharacterDocument, 
-        }, 
-        FlatDocument, ItemId, ItemType, Parent
+        },
+        anime_search::{
+            FlatDocument, ItemId, ItemType, Parent
+        } 
     }
 };
 
