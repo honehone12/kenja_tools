@@ -12,7 +12,7 @@ use crate::{
             AniCharaBridge, AnimeDocument, CharacterDocument, 
         },
         anime_search::{
-            FlatDocument, DocumentType, ItemType, Parent
+            FlatDocument, ItemId, DocumentType, Parent
         } 
     }
 };
@@ -95,9 +95,9 @@ pub(crate) async fn flatten_main(rating: Rating, mongo_client: MongoClient)
                 }
                 
                 batch.push(FlatDocument{
-                    item_id: DocumentType { 
+                    item_id: ItemId { 
                         id: chara.mal_id, 
-                        document_type: ItemType::Character 
+                        document_type: DocumentType::Character 
                     },
                     url: chara.url,
                     parent: Some(Parent{
@@ -133,9 +133,9 @@ pub(crate) async fn flatten_main(rating: Rating, mongo_client: MongoClient)
         anime.genres.into_iter().for_each(|g| tags.push(g.name));
         anime.themes.into_iter().for_each(|g| tags.push(g.name));
         batch.push(FlatDocument{
-            item_id: DocumentType{
+            item_id: ItemId{
                 id: anime.mal_id,
-                document_type: ItemType::Anime
+                document_type: DocumentType::Anime
             },
             url: anime.url,
             parent: None,

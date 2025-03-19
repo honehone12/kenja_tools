@@ -3,15 +3,15 @@ use serde_repr::{Serialize_repr, Deserialize_repr};
 
 #[derive(Serialize_repr, Deserialize_repr, Clone, Copy, Debug)]
 #[repr(i32)]
-pub(crate) enum ItemType {
+pub(crate) enum DocumentType {
     Anime = 1,
     Character = 2
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
-pub(crate) struct DocumentType {
+pub(crate) struct ItemId {
     pub(crate) id: i64,
-    pub(crate) document_type: ItemType
+    pub(crate) document_type: DocumentType
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -23,7 +23,7 @@ pub(crate) struct Parent {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub(crate) struct FlatDocument {
-    pub(crate) item_id: DocumentType,
+    pub(crate) item_id: ItemId,
     pub(crate) url: String,
     pub(crate) parent: Option<Parent>,
     pub(crate) tags: Vec<String>,
