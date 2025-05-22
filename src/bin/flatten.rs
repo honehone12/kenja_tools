@@ -1,13 +1,14 @@
-use std::vec;
+use std::{env, vec};
+use clap::Parser;
 use anyhow::bail;
 use chrono::{Datelike, NaiveDate};
 use futures::TryStreamExt;
 use mongodb::{bson::doc, Client as MongoClient};
 use tracing::info;
-use crate::{
-    commands::Rating,
+use kenja_tools::{
+    anime::is_expected_media_type,
     documents::{
-        is_expected_media_type,
+        Rating,
         anime::{
             AniCharaBridge, AnimeDocument, CharacterDocument, 
         },
@@ -16,6 +17,13 @@ use crate::{
         } 
     }
 };
+
+#[derive(Parser)]
+#[command(version)]
+struct Cli {
+    #[arg(value_enum)]
+    rating: Rating
+}
 
 pub(crate) async fn flatten_main(rating: Rating, mongo_client: MongoClient) 
 -> anyhow::Result<()> {
@@ -159,5 +167,19 @@ pub(crate) async fn flatten_main(rating: Rating, mongo_client: MongoClient)
         info!("inserted {}items", result.inserted_ids.len());
     }
     info!("done");
+    Ok(())
+}
+
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    tracing_subscriber::fmt().init();
+    dotenvy::dotenv()?;
+    let cli = Cli::parse();
+
+    let mongo_uri = env::var("MONGO_URI")?;
+    let mongo_client = MongoClient::with_uri_str(mongo_uri).await?;
+
+    flatten_main(cli.rating, mongo_client).await?;
+    
     Ok(())
 }

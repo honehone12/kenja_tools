@@ -1,56 +1,56 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
-pub(crate) struct AiredPeriod {
-    pub(crate) from: Option<String>
+pub struct AiredPeriod {
+    pub from: Option<String>
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
-pub(crate) struct Genre {
-    pub(crate) name: String
+pub struct Genre {
+    pub name: String
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
-pub(crate) struct AnimeDocument {
-    pub(crate) mal_id: i64,
-    pub(crate) url: String,
+pub struct AnimeDocument {
+    pub mal_id: i64,
+    pub url: String,
     #[serde(rename = "type")]
-    pub(crate) media_type: Option<String>,
-    pub(crate) aired: AiredPeriod,
-    pub(crate) title: String,
-    pub(crate) title_english: Option<String>,
-    pub(crate) title_japanese: Option<String>,
-    pub(crate) title_synonyms: Vec<String>,
-    pub(crate) synopsis: Option<String>,
-    pub(crate) season: Option<String>,
-    pub(crate) genres: Vec<Genre>,
-    pub(crate) themes: Vec<Genre>
+    pub media_type: Option<String>,
+    pub aired: AiredPeriod,
+    pub title: String,
+    pub title_english: Option<String>,
+    pub title_japanese: Option<String>,
+    pub title_synonyms: Vec<String>,
+    pub synopsis: Option<String>,
+    pub season: Option<String>,
+    pub genres: Vec<Genre>,
+    pub themes: Vec<Genre>
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
-pub(crate) struct CharacterDocument {
-    pub(crate) mal_id: i64,
-    pub(crate) url: String,
-    pub(crate) name: String,
-    pub(crate) name_kanji: Option<String>,
-    pub(crate) nicknames: Vec<String>,
-    pub(crate) about: Option<String>
+pub struct CharacterDocument {
+    pub mal_id: i64,
+    pub url: String,
+    pub name: String,
+    pub name_kanji: Option<String>,
+    pub nicknames: Vec<String>,
+    pub about: Option<String>
 }
 
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
-pub(crate) struct Character {
-    pub(crate) mal_id: i64
+pub struct Character {
+    pub mal_id: i64
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
-pub(crate) struct CharacterCast {
-    pub(crate) character: Character
+pub struct CharacterCast {
+    pub character: Character
     // voice_actors etc...
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
-pub(crate) struct AniCharaBridge {
-    pub(crate) mal_id: i64,
-    pub(crate) characters: Vec<CharacterCast>
+pub struct AniCharaBridge {
+    pub mal_id: i64,
+    pub characters: Vec<CharacterCast>
 }
