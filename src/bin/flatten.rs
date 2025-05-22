@@ -1,7 +1,7 @@
 use std::{env, vec};
 use clap::Parser;
 use anyhow::bail;
-use chrono::{Datelike, NaiveDate};
+use chrono::NaiveDate;
 use futures::TryStreamExt;
 use mongodb::{bson::doc, Client as MongoClient};
 use tracing::info;
@@ -20,23 +20,27 @@ use kenja_tools::{
 
 #[derive(Parser)]
 #[command(version)]
-struct Cli {
+struct Args {
+    #[arg(long)]
+    include_empty: bool,
+    #[arg(long, default_value_t = 1965)]
+    old: i32,
     #[arg(value_enum)]
     rating: Rating
 }
 
-pub(crate) async fn flatten_main(rating: Rating, mongo_client: MongoClient) 
+pub(crate) async fn flatten(args: Args, mongo_client: MongoClient) 
 -> anyhow::Result<()> {
 
     let source_db = mongo_client.database("anime");
     let dest_db = mongo_client.database("anime_search");
 
     let ani_colle = source_db.collection::<AnimeDocument>(
-        &format!("anime_{}", rating.to_string())
+        &format!("anime_{}", args.rating.to_string())
     );
     let ani_chara_colle = source_db.collection::<AniCharaBridge>("anime_chara");
     let chara_colle = source_db.collection::<CharacterDocument>("chara");
-    let flat_colle = dest_db.collection::<FlatDocument>(&rating.to_string());
+    let flat_colle = dest_db.collection::<FlatDocument>(&args.rating.to_string());
 
     info!("obtaining anime documents...");
     let mut ani_list = ani_colle
@@ -55,31 +59,29 @@ pub(crate) async fn flatten_main(rating: Rating, mongo_client: MongoClient)
         .try_collect::<Vec<CharacterDocument>>().await?;
 
     let chrono_fmt = "%Y-%m-%dT%H:%M:%S%z";
-    let Some(oldest) = NaiveDate::from_yo_opt(1965, 1) else {
+    let Some(oldest) = NaiveDate::from_yo_opt(args.old, 1) else {
         bail!("could not find a day on the calendar");
     };
 
     info!("start flattening");
     let mut batch = vec![];
     let mut inserted_chara_list = vec![];
-    for anime in  ani_list {
-        let year = match anime.aired.from {
-            Some(s) => {
-                let date = NaiveDate::parse_from_str(&s, &chrono_fmt)?;
+    for anime in ani_list {
+        match anime.aired.from {
+            Some(d) => {
+                let date = NaiveDate::parse_from_str(&d, &chrono_fmt)?;
                 if date < oldest {
                     continue;
                 }
-                date.year()
             }
             None => continue
         };
 
-        let media_type = match anime.media_type {
-            Some(s) => {
-                if !is_expected_media_type(&s) {
+        match anime.media_type {
+            Some(m) => {
+                if !is_expected_media_type(&m) {
                     continue;
                 }
-                s
             } 
             None => continue
         };
@@ -102,6 +104,17 @@ pub(crate) async fn flatten_main(rating: Rating, mongo_client: MongoClient)
                     continue;
                 }
                 
+                if !args.include_empty {
+                    match &chara.about {
+                        Some(a) => {
+                            if a.len() == 0 {
+                                continue;
+                            }
+                        }
+                        None => continue
+                    }
+                }
+
                 batch.push(FlatDocument{
                     item_id: ItemId { 
                         id: chara.mal_id, 
@@ -124,36 +137,16 @@ pub(crate) async fn flatten_main(rating: Rating, mongo_client: MongoClient)
             }
         }
 
-        let mut tags = vec![];
-        tags.push(media_type);
-        tags.push(match anime.season {
-            Some(s) => {
-                match s.as_str() {
-                    "winter" | "Winter" => format!("{year} Winter"),
-                    "spring" | "Spring" => format!("{year} Spring"),
-                    "summer" | "Summer" => format!("{year} Summer"),
-                    "fall" | "Fall" => format!("{year} Fall"),
-                    _ => year.to_string()
+        if !args.include_empty {
+        match &anime.synopsis {
+                Some(s) => {
+                    if s.len() == 0 {
+                        continue;
+                    }
                 }
-            },
-            None => year.to_string()
-        });
-        anime.genres.into_iter().for_each(|g| tags.push(g.name));
-        anime.themes.into_iter().for_each(|g| tags.push(g.name));
-        batch.push(FlatDocument{
-            item_id: ItemId{
-                id: anime.mal_id,
-                item_type: ItemType::Anime
-            },
-            url: anime.url,
-            parent: None,
-            tags, 
-            name: anime.title,
-            name_english: anime.title_english,
-            name_japanese: anime.title_japanese,
-            aliases: anime.title_synonyms,
-            description: anime.synopsis,
-        });
+                None => continue
+            }
+        }
 
         if batch.len() >= 100 {
             let result = flat_colle.insert_many(&batch).await?;
@@ -174,12 +167,12 @@ pub(crate) async fn flatten_main(rating: Rating, mongo_client: MongoClient)
 async fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt().init();
     dotenvy::dotenv()?;
-    let cli = Cli::parse();
+    let cli = Args::parse();
 
     let mongo_uri = env::var("MONGO_URI")?;
     let mongo_client = MongoClient::with_uri_str(mongo_uri).await?;
 
-    flatten_main(cli.rating, mongo_client).await?;
+    flatten(cli, mongo_client).await?;
     
     Ok(())
 }
