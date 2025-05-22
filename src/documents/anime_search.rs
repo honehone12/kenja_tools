@@ -26,7 +26,6 @@ pub struct FlatDocument {
     pub item_id: ItemId,
     pub url: String,
     pub parent: Option<Parent>,
-    pub tags: Vec<String>,
     pub name: String,
     pub name_english: Option<String>,
     pub name_japanese: Option<String>,

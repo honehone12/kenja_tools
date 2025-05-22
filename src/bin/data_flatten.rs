@@ -6,7 +6,7 @@ use futures::TryStreamExt;
 use mongodb::{bson::doc, Client as MongoClient};
 use tracing::info;
 use kenja_tools::{
-    anime::is_expected_media_type,
+    is_expected_media_type,
     documents::{
         Rating,
         anime::{
@@ -29,7 +29,7 @@ struct Args {
     rating: Rating
 }
 
-pub(crate) async fn flatten(args: Args, mongo_client: MongoClient) 
+async fn flatten(args: Args, mongo_client: MongoClient) 
 -> anyhow::Result<()> {
 
     let source_db = mongo_client.database("anime");
@@ -68,8 +68,8 @@ pub(crate) async fn flatten(args: Args, mongo_client: MongoClient)
     let mut inserted_chara_list = vec![];
     for anime in ani_list {
         match anime.aired.from {
-            Some(d) => {
-                let date = NaiveDate::parse_from_str(&d, &chrono_fmt)?;
+            Some(s) => {
+                let date = NaiveDate::parse_from_str(&s, &chrono_fmt)?;
                 if date < oldest {
                     continue;
                 }
@@ -78,8 +78,8 @@ pub(crate) async fn flatten(args: Args, mongo_client: MongoClient)
         };
 
         match anime.media_type {
-            Some(m) => {
-                if !is_expected_media_type(&m) {
+            Some(s) => {
+                if !is_expected_media_type(&s) {
                     continue;
                 }
             } 
@@ -106,8 +106,8 @@ pub(crate) async fn flatten(args: Args, mongo_client: MongoClient)
                 
                 if !args.include_empty {
                     match &chara.about {
-                        Some(a) => {
-                            if a.len() == 0 {
+                        Some(s) => {
+                            if s.len() == 0 {
                                 continue;
                             }
                         }
@@ -126,7 +126,6 @@ pub(crate) async fn flatten(args: Args, mongo_client: MongoClient)
                         name: anime.title.clone(),
                         name_japanese: anime.title_japanese.clone(),
                     }),
-                    tags: vec![],
                     name: chara.name,
                     name_english: None,
                     name_japanese: chara.name_kanji,
@@ -147,6 +146,20 @@ pub(crate) async fn flatten(args: Args, mongo_client: MongoClient)
                 None => continue
             }
         }
+
+        batch.push(FlatDocument{
+            item_id: ItemId{
+                id: anime.mal_id,
+                item_type: ItemType::Anime
+            },
+            url: anime.url,
+            parent: None,
+            name: anime.title,
+            name_english: anime.title_english,
+            name_japanese: anime.title_japanese,
+            aliases: anime.title_synonyms,
+            description: anime.synopsis,
+        });
 
         if batch.len() >= 100 {
             let result = flat_colle.insert_many(&batch).await?;

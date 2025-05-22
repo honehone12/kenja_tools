@@ -1,12 +1,12 @@
 use std::{env, time::Duration};
-use super::{AnimeCharacters, request};
 use tokio::time;
 use mongodb::{bson::{doc, Bson}, Client as MongoClient};
 use reqwest::Client as HttpClient;
 use serde_json::Value;
 use tracing::{info, warn};
+use kenja_tools::{documents::anime_raw::AnimeCharacters, api::request};
 
-pub(crate) async fn ani_chara_main() -> anyhow::Result<()> {
+async fn req_ani_chara() -> anyhow::Result<()> {
     tracing_subscriber::fmt().init();
     dotenvy::dotenv()?;
 
@@ -52,4 +52,9 @@ pub(crate) async fn ani_chara_main() -> anyhow::Result<()> {
 
     info!("done");
     Ok(())
+}
+
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    req_ani_chara().await
 }
