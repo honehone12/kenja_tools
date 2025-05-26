@@ -9,7 +9,7 @@ use kenja_tools::api::{paged_url, request};
 
 #[derive(Parser)]
 struct Args {
-    #[arg(default_value_t = 1500)]
+    #[arg(long, default_value_t = 1500)]
     interval_mil: u64
 }
 

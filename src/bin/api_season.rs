@@ -9,9 +9,11 @@ use kenja_tools::{api::request_pages, documents::anime_raw::Season};
 #[derive(Parser)]
 #[command(version)]
 struct Args {
+    #[arg(long)]
     year: String,
+    #[arg(long)]
     season: Season,
-    #[arg(default_value_t = 1500)]
+    #[arg(long, default_value_t = 1500)]
     interval_mil: u64
 }
 

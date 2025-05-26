@@ -13,7 +13,10 @@ use kenja_tools::{
             AniCharaBridge, AnimeDocument, CharacterDocument, 
         },
         anime_search::{
-            FlatDocument, ItemId, ItemType, Parent
+            FlatDocument, Parent
+        },
+        id:: {
+            ItemId, ItemType
         } 
     }
 };
@@ -25,7 +28,7 @@ struct Args {
     include_empty: bool,
     #[arg(long, default_value_t = 1965)]
     oldest: i32,
-    #[arg(value_enum)]
+    #[arg(long, value_enum)]
     rating: Rating
 }
 
@@ -48,21 +51,18 @@ async fn flatten(args: Args, mongo_client: MongoClient)
     let flat_colle = dest_db.collection::<FlatDocument>(&flat);
 
     info!("obtaining {ani} documents...");
-    let mut ani_list = ani_colle
-        .find(doc! {}).await?
+    let mut ani_list = ani_colle.find(doc! {}).await?
         .try_collect::<Vec<AnimeDocument>>().await?;
     ani_list.sort_unstable_by_key(|d| d.mal_id);
     info!("{} anime documents", ani_list.len());
     
     info!("obtaining {ani_chara} bridge...");
-    let mut ani_chara_list = ani_chara_colle
-        .find(doc! {}).await?
+    let mut ani_chara_list = ani_chara_colle.find(doc! {}).await?
         .try_collect::<Vec<AniCharaBridge>>().await?;
     info!("{} anime-chara bridges", ani_chara_list.len());
 
     info!("obtaining {chara} documents...");
-    let mut chara_list = chara_colle
-        .find(doc! {}).await?
+    let mut chara_list = chara_colle.find(doc! {}).await?
         .try_collect::<Vec<CharacterDocument>>().await?;
     info!("{} character documets", chara_list.len());
 

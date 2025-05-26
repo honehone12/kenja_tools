@@ -1,16 +1,10 @@
-use std::time::Duration;
-use tokio::time;
+use std::{path::PathBuf, str::FromStr, time::Duration};
+use futures::TryStreamExt;
+use tokio::{fs, io::{AsyncWriteExt, BufWriter}, time};
 use serde_json::Value;
-use reqwest::{Client as HttpClient, StatusCode};
+use reqwest::{Client as HttpClient, StatusCode, Url};
 use tracing::info;
 use anyhow::bail;
-
-pub fn paged_url(url: &str, page: u32) -> String {
-    match page {
-        0..=1 => url.to_string(),
-        _ => format!("{url}?page={page}")
-    }
-}
 
 pub async fn request(http_client: HttpClient, url: &str) 
 -> anyhow::Result<(Vec<Value>, Value)> {
@@ -40,6 +34,13 @@ pub async fn request(http_client: HttpClient, url: &str)
     Ok((data, pagination))
 }
 
+pub fn paged_url(url: &str, page: u32) -> String {
+    match page {
+        0..=1 => url.to_string(),
+        _ => format!("{url}?page={page}")
+    }
+}
+
 pub async fn request_pages(
     http_client: HttpClient,
     url: &str,
@@ -64,4 +65,30 @@ pub async fn request_pages(
     }
 
     Ok(list)
+}
+
+pub async fn request_img(
+    http_client: HttpClient,
+    into_url: &str,
+    save_path: &str,
+) -> anyhow::Result<String> {
+    let url = Url::parse(into_url)?;
+    let res = http_client.get(into_url).send().await?;
+    if res.status() != StatusCode::OK {
+        bail!("failed to request img");
+    }
+
+    let mut file_name = PathBuf::from_str(save_path)?;
+    file_name.push(url.path());
+    let file = fs::File::create(&file_name).await?;
+    let mut write_stream = BufWriter::new(file);
+    let mut read_stream = res.bytes_stream();
+    
+    while let Some(b) = read_stream.try_next().await? {
+        write_stream.write(&b).await?;
+    }
+    write_stream.flush().await?;
+
+    info!("created {file_name:?}");
+    Ok(file_name.display().to_string())
 }

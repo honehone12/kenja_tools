@@ -10,7 +10,7 @@ use kenja_tools::{documents::anime_raw::AnimeCharacters, api::request};
 #[derive(Parser)]
 #[command(version)]
 struct Args {
-    #[arg(default_value_t = 1500)]
+    #[arg(long, default_value_t = 1500)]
     interval_mil: u64
 }
 
