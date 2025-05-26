@@ -40,6 +40,7 @@ async fn img(
     } else {
         vec![]
     };
+    info!("{} are listed as done", done_list.len());
 
     let db = mongo_client.database(&env::var("SEARCH_DB")?);
     let colle = db.collection::<Img>(&args.collection);
