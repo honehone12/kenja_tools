@@ -218,12 +218,12 @@ async fn flatten(args: Args, mongo_client: MongoClient)
 async fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt().init();
     dotenvy::dotenv()?;
-    let cli = Args::parse();
+    let args = Args::parse();
 
     let mongo_uri = env::var("MONGO_URI")?;
     let mongo_client = MongoClient::with_uri_str(mongo_uri).await?;
 
-    flatten(cli, mongo_client).await?;
+    flatten(args, mongo_client).await?;
     
     Ok(())
 }

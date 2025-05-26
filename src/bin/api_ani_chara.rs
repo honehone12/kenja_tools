@@ -2,24 +2,30 @@ use std::{env, time::Duration};
 use tokio::time;
 use mongodb::{bson::{doc, Bson}, Client as MongoClient};
 use reqwest::Client as HttpClient;
+use clap::Parser;
 use serde_json::Value;
 use tracing::{info, warn};
 use kenja_tools::{documents::anime_raw::AnimeCharacters, api::request};
 
-async fn req_ani_chara() -> anyhow::Result<()> {
-    tracing_subscriber::fmt().init();
-    dotenvy::dotenv()?;
+#[derive(Parser)]
+#[command(version)]
+struct Args {
+    #[arg(default_value_t = 1500)]
+    interval_mil: u64
+}
 
-    let mongo_uri = env::var("MONGO_URI")?;
-    let base_path = env::var("BASE_PATH")?;
-
-    let mongo_client = MongoClient::with_uri_str(mongo_uri).await?;
+async fn req_ani_chara(
+    args: Args,
+    mongo_client: MongoClient, 
+    http_client: HttpClient
+) -> anyhow::Result<()> {
     let db = mongo_client.database(&env::var("POOL_DB")?);
     let source = db.collection::<Value>(&env::var("ANI_CL")?);
     let collection = db.collection::<AnimeCharacters>(&env::var("ANI_CHARA_CL")?);
 
-    let http_client = HttpClient::new();
-    let interval = Duration::from_millis(1500);
+    let base_url = env::var("BASE_URL")?;
+
+    let interval = Duration::from_millis(args.interval_mil);
 
     let list = source.distinct("mal_id", doc! {}).await?;
     let total = list.len();
@@ -27,8 +33,8 @@ async fn req_ani_chara() -> anyhow::Result<()> {
     for (i, bson) in list.iter().enumerate() {
         if let Bson::Int64(mal_id) = bson {
             info!("{i}/{total}");
-            let url = format!("{base_path}/anime/{mal_id}/characters");
-            match request(&http_client, &url).await {
+            let url = format!("{}/anime/{mal_id}/characters", base_url);
+            match request(http_client.clone(), &url).await {
                 Err(e) => warn!("request failed. {e}. skipping"),
                 Ok((data, _)) => {
                     if data.is_empty() {
@@ -56,5 +62,14 @@ async fn req_ani_chara() -> anyhow::Result<()> {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    req_ani_chara().await
+    tracing_subscriber::fmt().init();
+    dotenvy::dotenv()?;
+    let args = Args::parse();
+
+    let mongo_uri = env::var("MONGO_URI")?;
+    let mongo_client = MongoClient::with_uri_str(mongo_uri).await?;
+
+    let http_client = HttpClient::new();
+    
+    req_ani_chara(args, mongo_client, http_client).await
 }

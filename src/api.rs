@@ -5,14 +5,14 @@ use reqwest::{Client as HttpClient, StatusCode};
 use tracing::info;
 use anyhow::bail;
 
-pub fn paged_url(path: &str, page: u32) -> String {
+pub fn paged_url(url: &str, page: u32) -> String {
     match page {
-        0..=1 => path.to_string(),
-        _ => format!("{path}?page={page}")
+        0..=1 => url.to_string(),
+        _ => format!("{url}?page={page}")
     }
 }
 
-pub async fn request(http_client: &HttpClient, url: &str) 
+pub async fn request(http_client: HttpClient, url: &str) 
 -> anyhow::Result<(Vec<Value>, Value)> {
     info!("requesting {url}");
     let res = http_client.get(url).send().await?;
@@ -41,19 +41,19 @@ pub async fn request(http_client: &HttpClient, url: &str)
 }
 
 pub async fn request_pages(
-    http_client: &HttpClient,
-    path: &str,
-    interval_mil: u64
+    http_client: HttpClient,
+    url: &str,
+    interval: Duration
 ) -> anyhow::Result<Vec<Value>> {
     let mut list = vec![];
     let mut page = 0;
-    let interval = Duration::from_millis(interval_mil);
 
     loop {
         page += 1;
         
-        let url = paged_url(path, page);
-        let (mut data, pagination) = request(http_client, &url).await?;
+        let url = paged_url(url, page);
+        let client = http_client.clone();
+        let (mut data, pagination) = request(client, &url).await?;
         list.append(&mut data);
 
         if !matches!(pagination["has_next_page"], Value::Bool(true)) {
