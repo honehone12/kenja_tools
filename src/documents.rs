@@ -23,8 +23,9 @@ impl Display for Rating {
 impl Rating {
     #[inline]
     pub fn as_suffix(&self, source: &str) -> String {
-        let mut s = source.to_string();
-        s.push_str(&self.to_string());
+        let mut s = self.to_string();
+        s.insert(0, '_');
+        s.insert_str(0, source);
         s
     }
 }

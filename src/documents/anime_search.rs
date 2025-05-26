@@ -25,6 +25,7 @@ pub struct Parent {
 pub struct FlatDocument {
     pub item_id: ItemId,
     pub url: String,
+    pub img: String,
     pub parent: Option<Parent>,
     pub name: String,
     pub name_english: Option<String>,

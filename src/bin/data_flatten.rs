@@ -35,30 +35,36 @@ async fn flatten(args: Args, mongo_client: MongoClient)
     let source_db = mongo_client.database(&env::var("POOL_DB")?);
     let dest_db = mongo_client.database(&env::var("SEARCH_DB")?);
 
-    let ani_colle = source_db.collection
-        ::<AnimeDocument>(&args.rating.as_suffix(&env::var("ANI_CL")?));
-    let ani_chara_colle = source_db.collection
-        ::<AniCharaBridge>(&env::var("ANI_CHARA_CL")?);
-    let chara_colle = source_db.collection
-        ::<CharacterDocument>(&env::var("CHARA_CL")?);
-    let flat_colle = dest_db.collection
-        ::<FlatDocument>(&args.rating.as_suffix(&env::var("FLAT_CL")?));
+    let ani = args.rating.as_suffix(&env::var("ANI_CL")?);
+    let ani_colle = source_db.collection::<AnimeDocument>(&ani);
+    let ani_chara = env::var("ANI_CHARA_CL")?;
+    let ani_chara_colle = source_db.collection::<AniCharaBridge>(&ani_chara);
+    let chara = env::var("CHARA_CL")?;
+    let chara_colle = source_db.collection::<CharacterDocument>(&chara);
+    let mut flat = args.rating.as_suffix(&env::var("FLAT_CL")?);
+    if !args.include_empty {
+        flat.push_str("_non_null");
+    }
+    let flat_colle = dest_db.collection::<FlatDocument>(&flat);
 
-    info!("obtaining anime documents...");
+    info!("obtaining {ani} documents...");
     let mut ani_list = ani_colle
         .find(doc! {}).await?
         .try_collect::<Vec<AnimeDocument>>().await?;
     ani_list.sort_unstable_by_key(|d| d.mal_id);
+    info!("{} anime documents", ani_list.len());
     
-    info!("obtaining anime-character bridge...");
+    info!("obtaining {ani_chara} bridge...");
     let mut ani_chara_list = ani_chara_colle
         .find(doc! {}).await?
         .try_collect::<Vec<AniCharaBridge>>().await?;
+    info!("{} anime-chara bridges", ani_chara_list.len());
 
-    info!("obtaining character documents...");
+    info!("obtaining {chara} documents...");
     let mut chara_list = chara_colle
         .find(doc! {}).await?
         .try_collect::<Vec<CharacterDocument>>().await?;
+    info!("{} character documets", chara_list.len());
 
     let chrono_fmt = "%Y-%m-%dT%H:%M:%S%z";
     let Some(oldest) = NaiveDate::from_yo_opt(args.oldest, 1) else {
@@ -117,12 +123,27 @@ async fn flatten(args: Args, mongo_client: MongoClient)
                     }
                 }
 
+                let img = match chara.images {
+                    Some(i) => {
+                        let Some(u) = i.jpg else {
+                            continue
+                        };
+
+                        match u.image_url {
+                            Some(url) => url,
+                            None => continue
+                        }
+                    }
+                    None => continue
+                };
+
                 batch.push(FlatDocument{
                     item_id: ItemId { 
                         id: chara.mal_id, 
                         item_type: ItemType::Character 
                     },
                     url: chara.url,
+                    img,
                     parent: Some(Parent{
                         id: anime.mal_id,
                         name: anime.title.clone(),
@@ -149,12 +170,27 @@ async fn flatten(args: Args, mongo_client: MongoClient)
             }
         }
 
+        let img = match anime.images {
+                    Some(i) => {
+                        let Some(u) = i.jpg else {
+                            continue
+                        };
+
+                        match u.image_url {
+                            Some(url) => url,
+                            None => continue
+                        }
+                    }
+                    None => continue
+                };
+
         batch.push(FlatDocument{
             item_id: ItemId{
                 id: anime.mal_id,
                 item_type: ItemType::Anime
             },
             url: anime.url,
+            img,
             parent: None,
             name: anime.title,
             name_english: anime.title_english,

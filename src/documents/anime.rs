@@ -11,9 +11,20 @@ pub struct Genre {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct ImageUrls {
+    pub image_url: Option<String>
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct Images {
+    pub jpg: Option<ImageUrls>
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct AnimeDocument {
     pub mal_id: i64,
     pub url: String,
+    pub images: Option<Images>,
     #[serde(rename = "type")]
     pub media_type: Option<String>,
     pub aired: AiredPeriod,
@@ -31,6 +42,7 @@ pub struct AnimeDocument {
 pub struct CharacterDocument {
     pub mal_id: i64,
     pub url: String,
+    pub images: Option<Images>,
     pub name: String,
     pub name_kanji: Option<String>,
     pub nicknames: Vec<String>,
