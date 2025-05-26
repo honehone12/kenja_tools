@@ -51,7 +51,6 @@ async fn img(
     let mut it = 0;
     for mut img in img_list {
         if done_list.iter().find(|i| i.item_id == img.item_id).is_some() {
-            time::sleep(interval).await; 
             continue;
         }
 
