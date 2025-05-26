@@ -1,21 +1,27 @@
-use std::env;
+use std::{env, time::Duration};
 use futures::TryStreamExt;
-use tokio::fs;
+use tokio::{fs, time};
 use mongodb::{bson::doc, Client as MongoClient};
 use reqwest::Client as HttpClient;
 use clap::Parser;
 use kenja_tools::{api::request_img, documents::local::Img};
-use tracing::info;
+use tracing::{info, warn};
 
 #[derive(Parser)]
 #[command(version)]
 struct Args {
-    #[arg(long, default_value = "json")]
+    #[arg(long, default_value_t = 100)]
+    iteration: u32,
+    #[arg(long, default_value = "./json")]
     json_path: String,
     #[arg(long)]
     img_path: String,
     #[arg(long)]
     collection: String,
+    #[arg(long, default_value_t = 1500)]
+    interval_mil: u64,
+    #[arg(long, default_value_t = 3000)]
+    timeout_mil: u64
 }
 
 async fn img(
@@ -40,15 +46,36 @@ async fn img(
     info!("obtaining {} documents...", args.collection);
     let img_list = colle.find(doc! {}).await?.try_collect::<Vec<Img>>().await?;
     info!("{} img documents", img_list.len());
+    let interval = Duration::from_millis(args.interval_mil);
 
+    let mut it = 0;
     for mut img in img_list {
         if done_list.iter().find(|i| i.item_id == img.item_id).is_some() {
+            time::sleep(interval).await; 
             continue;
         }
 
-        let path = request_img(http_client.clone(), &img.img, &args.img_path).await?;
+        let path = match request_img(
+            http_client.clone(), 
+            Duration::from_millis(args.timeout_mil),
+            &img.img, 
+            &args.img_path
+        ).await {
+            Ok(p) => p,
+            Err(e) => {
+                warn!("{e}");
+                time::sleep(interval).await; 
+                continue;
+            }
+        };
         img.path = Some(path);
-        done_list.push(img); 
+        done_list.push(img);
+        time::sleep(interval).await;
+        it += 1;
+
+        if it >= args.iteration {
+            break;
+        } 
     }
 
     let s = serde_json::to_string_pretty(&done_list)?;
