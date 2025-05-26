@@ -10,7 +10,9 @@ use kenja_tools::api::{paged_url, request};
 #[derive(Parser)]
 struct Args {
     #[arg(long, default_value_t = 1500)]
-    interval_mil: u64
+    interval_mil: u64,
+    #[arg(long, default_value_t = 5000)]
+    timeout: u64
 }
 
 async fn req_top_chara(
@@ -25,6 +27,7 @@ async fn req_top_chara(
     let base_url = env::var("BASE_URL")?;
 
     let interval = Duration::from_millis(args.interval_mil);
+    let timeout = Duration::from_millis(args.timeout);
     let url = format!("{base_url}/top/characters");
     let mut page = 0;
 
@@ -32,7 +35,7 @@ async fn req_top_chara(
         page += 1;
 
         let url = paged_url(&url, page);
-        let (data, pagination) = request(http_client.clone(), &url).await?;
+        let (data, pagination) = request(http_client.clone(), timeout, &url).await?;
 
         if data.is_empty() {
             info!("data is empty");

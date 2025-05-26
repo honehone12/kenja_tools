@@ -6,10 +6,14 @@ use reqwest::{Client as HttpClient, StatusCode, Url};
 use tracing::info;
 use anyhow::bail;
 
-pub async fn request(http_client: HttpClient, url: &str) 
+pub async fn request(
+    http_client: HttpClient, 
+    timeout: Duration,
+    url: &str
+) 
 -> anyhow::Result<(Vec<Value>, Value)> {
     info!("requesting {url}");
-    let res = http_client.get(url).send().await?;
+    let res = http_client.get(url).timeout(timeout).send().await?;
     let status = res.status();
     if status != StatusCode::OK {
         bail!("{url} respnsed {status}");
@@ -43,8 +47,9 @@ pub fn paged_url(url: &str, page: u32) -> String {
 
 pub async fn request_pages(
     http_client: HttpClient,
-    url: &str,
-    interval: Duration
+    interval: Duration,
+    timeout: Duration,
+    url: &str
 ) -> anyhow::Result<Vec<Value>> {
     let mut list = vec![];
     let mut page = 0;
@@ -54,7 +59,7 @@ pub async fn request_pages(
         
         let url = paged_url(url, page);
         let client = http_client.clone();
-        let (mut data, pagination) = request(client, &url).await?;
+        let (mut data, pagination) = request(client, timeout, &url).await?;
         list.append(&mut data);
 
         if !matches!(pagination["has_next_page"], Value::Bool(true)) {

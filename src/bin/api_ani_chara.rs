@@ -11,7 +11,9 @@ use kenja_tools::{documents::anime_raw::AnimeCharacters, api::request};
 #[command(version)]
 struct Args {
     #[arg(long, default_value_t = 1500)]
-    interval_mil: u64
+    interval_mil: u64,
+    #[arg(long, default_value_t = 5000)]
+    timeout: u64
 }
 
 async fn req_ani_chara(
@@ -26,6 +28,7 @@ async fn req_ani_chara(
     let base_url = env::var("BASE_URL")?;
 
     let interval = Duration::from_millis(args.interval_mil);
+    let timeout = Duration::from_millis(args.timeout);
 
     let list = source.distinct("mal_id", doc! {}).await?;
     let total = list.len();
@@ -34,7 +37,7 @@ async fn req_ani_chara(
         if let Bson::Int64(mal_id) = bson {
             info!("{i}/{total}");
             let url = format!("{}/anime/{mal_id}/characters", base_url);
-            match request(http_client.clone(), &url).await {
+            match request(http_client.clone(), timeout, &url).await {
                 Err(e) => warn!("request failed. {e}. skipping"),
                 Ok((data, _)) => {
                     if data.is_empty() {

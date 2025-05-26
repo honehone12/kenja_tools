@@ -47,6 +47,7 @@ async fn img(
     let img_list = colle.find(doc! {}).await?.try_collect::<Vec<Img>>().await?;
     info!("{} img documents", img_list.len());
     let interval = Duration::from_millis(args.interval_mil);
+    let timeout = Duration::from_millis(args.timeout_mil);
 
     let mut it = 0;
     for mut img in img_list {
@@ -56,7 +57,7 @@ async fn img(
 
         let path = match request_img(
             http_client.clone(), 
-            Duration::from_millis(args.timeout_mil),
+            timeout,
             &img.img, 
             &args.img_path
         ).await {
