@@ -21,10 +21,10 @@ use kenja_tools::{
 #[derive(Parser)]
 #[command(version)]
 struct Args {
-    #[arg(long)]
+    #[arg(long, default_value_t = false)]
     include_empty: bool,
     #[arg(long, default_value_t = 1965)]
-    old: i32,
+    oldest: i32,
     #[arg(value_enum)]
     rating: Rating
 }
@@ -32,15 +32,17 @@ struct Args {
 async fn flatten(args: Args, mongo_client: MongoClient) 
 -> anyhow::Result<()> {
 
-    let source_db = mongo_client.database("anime");
-    let dest_db = mongo_client.database("anime_search");
+    let source_db = mongo_client.database(&env::var("POOL_DB")?);
+    let dest_db = mongo_client.database(&env::var("SEARCH_DB")?);
 
-    let ani_colle = source_db.collection::<AnimeDocument>(
-        &format!("anime_{}", args.rating.to_string())
-    );
-    let ani_chara_colle = source_db.collection::<AniCharaBridge>("anime_chara");
-    let chara_colle = source_db.collection::<CharacterDocument>("chara");
-    let flat_colle = dest_db.collection::<FlatDocument>(&args.rating.to_string());
+    let ani_colle = source_db.collection
+        ::<AnimeDocument>(&args.rating.as_suffix(&env::var("ANI_CL")?));
+    let ani_chara_colle = source_db.collection
+        ::<AniCharaBridge>(&env::var("ANI_CHARA_CL")?);
+    let chara_colle = source_db.collection
+        ::<CharacterDocument>(&env::var("CHARA_CL")?);
+    let flat_colle = dest_db.collection
+        ::<FlatDocument>(&args.rating.as_suffix(&env::var("FLAT_CL")?));
 
     info!("obtaining anime documents...");
     let mut ani_list = ani_colle
@@ -59,7 +61,7 @@ async fn flatten(args: Args, mongo_client: MongoClient)
         .try_collect::<Vec<CharacterDocument>>().await?;
 
     let chrono_fmt = "%Y-%m-%dT%H:%M:%S%z";
-    let Some(oldest) = NaiveDate::from_yo_opt(args.old, 1) else {
+    let Some(oldest) = NaiveDate::from_yo_opt(args.oldest, 1) else {
         bail!("could not find a day on the calendar");
     };
 

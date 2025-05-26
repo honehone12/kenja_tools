@@ -14,9 +14,9 @@ async fn req_ani_chara() -> anyhow::Result<()> {
     let base_path = env::var("BASE_PATH")?;
 
     let mongo_client = MongoClient::with_uri_str(mongo_uri).await?;
-    let db = mongo_client.database("anime");
-    let source = db.collection::<Value>("anime");
-    let collection = db.collection::<AnimeCharacters>("anime_chara");
+    let db = mongo_client.database(&env::var("POOL_DB")?);
+    let source = db.collection::<Value>(&env::var("ANI_CL")?);
+    let collection = db.collection::<AnimeCharacters>(&env::var("ANI_CHARA_CL")?);
 
     let http_client = HttpClient::new();
     let interval = Duration::from_millis(1500);

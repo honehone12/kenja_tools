@@ -14,8 +14,8 @@ async fn req_top_chara() -> anyhow::Result<()> {
     let base_path = env::var("BASE_PATH")?;
 
     let mongo_client = MongoClient::with_uri_str(mongo_uri).await?;
-    let db = mongo_client.database("anime");
-    let collection = db.collection::<Value>("chara");
+    let db = mongo_client.database(&env::var("POOL_DB")?);
+    let collection = db.collection::<Value>(&env::var("CHARA_CL")?);
     
     let http_client = HttpClient::new();
     let interval = Duration::from_millis(1500);
