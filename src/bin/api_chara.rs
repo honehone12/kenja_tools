@@ -8,6 +8,7 @@ use tracing::info;
 use kenja_tools::api::{paged_url, request};
 
 #[derive(Parser)]
+#[command(version)]
 struct Args {
     #[arg(long, default_value_t = 1500)]
     interval_mil: u64,
