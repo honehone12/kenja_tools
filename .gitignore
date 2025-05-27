@@ -2,6 +2,7 @@
 /json
 /image
 /images
+/img
 
 .env
 Cargo.lock

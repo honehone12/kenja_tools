@@ -76,7 +76,9 @@ async fn img(
 
         if it >= args.iteration {
             break;
-        } 
+        }
+        
+        info!("iteration {it}"); 
     }
 
     let s = serde_json::to_string_pretty(&done_list)?;
