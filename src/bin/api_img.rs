@@ -56,19 +56,16 @@ async fn img(
             &args.img_path
         ).await {
             warn!("{e}");
-            time::sleep(interval).await; 
-            continue;
         };
 
-        time::sleep(interval).await;
         it += 1;
-
         if it >= args.iteration {
             info!("quit on max iteration");
             break;
         }
         
         info!("iteration {it}"); 
+        time::sleep(interval).await;
     }
 
     info!("done");
