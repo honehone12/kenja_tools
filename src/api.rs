@@ -2,7 +2,7 @@ use std::{path::PathBuf, str::FromStr, time::Duration};
 use futures::TryStreamExt;
 use tokio::{fs, io::{AsyncWriteExt, BufWriter}, time};
 use serde_json::Value;
-use reqwest::{Client as HttpClient, StatusCode, Url};
+use reqwest::{Client as HttpClient, StatusCode};
 use tracing::info;
 use anyhow::bail;
 
@@ -75,22 +75,17 @@ pub async fn request_pages(
 pub async fn request_img(
     http_client: HttpClient,
     timeout: Duration,
-    into_url: &str,
-    save_path: &str,
-) -> anyhow::Result<String> {
-    info!("requesting {into_url}");
+    url: &str,
+    file_name: &str,
+) -> anyhow::Result<()> {
+    info!("requesting {url}");
 
-    let url = Url::parse(into_url)?;
-    let (_, name) = url.path().split_at(1);
-
-    let res = http_client.get(into_url).timeout(timeout).send().await?;
+    let res = http_client.get(url).timeout(timeout).send().await?;
     if res.status() != StatusCode::OK {
         bail!("failed to request img");
     }
 
-    let mut file_name = PathBuf::from_str(save_path)?;
-    
-    file_name.push(name);
+    let file_name = PathBuf::from_str(file_name)?;
     if let Some(dir) = file_name.parent() {
         fs::create_dir_all(dir).await?;
     }
@@ -105,5 +100,5 @@ pub async fn request_img(
     write_stream.flush().await?;
 
     info!("created {file_name:?}");
-    Ok(file_name.display().to_string())
+    Ok(())
 }

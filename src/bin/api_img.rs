@@ -2,7 +2,7 @@ use std::{env, time::Duration};
 use futures::TryStreamExt;
 use tokio::{fs, time};
 use mongodb::{bson::doc, Client as MongoClient};
-use reqwest::Client as HttpClient;
+use reqwest::{Client as HttpClient, Url};
 use clap::Parser;
 use kenja_tools::{api::request_img, documents::local::Img};
 use tracing::{info, warn};
@@ -12,8 +12,6 @@ use tracing::{info, warn};
 struct Args {
     #[arg(long, default_value_t = 100)]
     iteration: u32,
-    #[arg(long, default_value = "./json")]
-    json_path: String,
     #[arg(long)]
     img_path: String,
     #[arg(long)]
@@ -29,48 +27,39 @@ async fn img(
     mongo_client: MongoClient,
     http_client: HttpClient
 ) -> anyhow::Result<()> {
-    let img_file_path = format!("{}/img.json", args.json_path);
-    let exists = match fs::try_exists(&img_file_path).await {
-        Ok(f) => f,
-        Err(_) => false
-    };
-    let mut done_list = if exists {
-        let s = fs::read_to_string(&img_file_path).await?;
-        serde_json::from_str::<Vec<Img>>(&s)?
-    } else {
-        vec![]
-    };
-    info!("{} are listed as done", done_list.len());
-
     let db = mongo_client.database(&env::var("SEARCH_DB")?);
     let colle = db.collection::<Img>(&args.collection);
     info!("obtaining {} documents...", args.collection);
     let img_list = colle.find(doc! {}).await?.try_collect::<Vec<Img>>().await?;
     info!("{} img documents", img_list.len());
+    
     let interval = Duration::from_millis(args.interval_mil);
     let timeout = Duration::from_millis(args.timeout_mil);
 
+    let img_root = match args.img_path.strip_suffix('/') {
+        Some(r) => r,
+        None => &args.img_path 
+    };    
+
     let mut it = 0;
-    for mut img in img_list {
-        if done_list.iter().find(|i| i.item_id == img.item_id).is_some() {
+    for img in img_list {
+        let url = Url::parse(&img.img)?;
+        let path = format!("{img_root}{}", url.path());
+        if fs::try_exists(path).await? {
             continue;
         }
 
-        let path = match request_img(
+        if let Err(e) = request_img(
             http_client.clone(), 
             timeout,
             &img.img, 
             &args.img_path
         ).await {
-            Ok(p) => p,
-            Err(e) => {
-                warn!("{e}");
-                time::sleep(interval).await; 
-                continue;
-            }
+            warn!("{e}");
+            time::sleep(interval).await; 
+            continue;
         };
-        img.path = Some(path);
-        done_list.push(img);
+
         time::sleep(interval).await;
         it += 1;
 
@@ -81,9 +70,6 @@ async fn img(
         info!("iteration {it}"); 
     }
 
-    let s = serde_json::to_string_pretty(&done_list)?;
-    fs::write(img_file_path, s).await?;
-    
     info!("done");
     Ok(())
 } 
