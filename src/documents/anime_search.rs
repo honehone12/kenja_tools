@@ -20,3 +20,9 @@ pub struct FlatDocument {
     pub aliases: Vec<String>,
     pub description: Option<String>
 }
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct Img {
+    pub item_id: ItemId,
+    pub img: String,
+}
