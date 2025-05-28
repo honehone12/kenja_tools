@@ -1,37 +1,36 @@
+use std::env;
 use tokio::fs;
 use clap::Parser;
+use mongodb::Client as MongoClient;
 use anyhow::bail;
-use kenja_tools::documents::local::Img;
+use kenja_tools::documents::id::Ids;
 
 #[derive(Parser)]
 #[command(version)]
 struct Args {
     #[arg(long)]
-    pattern: String,
+    collection: String,
     #[arg(long)]
-    img_list: String
+    pattern: String
+}
+
+async fn clean_img(args: Args, mongo_client: MongoClient) -> anyhow::Result<()> {    
+    let db = mongo_client.database(&env::var("SEARCH_DB")?);
+    let colle = db.collection::<Ids>(&args.collection);
+    
+    Ok(())
 }
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    tracing_subscriber::fmt().init();
+    dotenvy::dotenv()?;
     let args = Args::parse();
 
-    if !fs::try_exists(&args.img_list).await? {
-        bail!("could not find img list file");
-    }
+    let mongo_uri = env::var("MONGO_URI")?;
+    let mongo_client = MongoClient::with_uri_str(mongo_uri).await?;
 
-    let s = fs::read_to_string(&args.img_list).await?;
-    let img_list = serde_json::from_str::<Vec<Img>>(&s)?;
+    
 
-    let clean = img_list.into_iter().filter(|i| {
-        match &i.path {
-            Some(p) => !p.contains(&args.pattern),
-            None => false
-        }
-    }).collect::<Vec<Img>>();
-
-    let s = serde_json::to_string(&clean)?;
-    fs::write(&args.img_list, s).await?;
-
-    Ok(())
+    clean_img(args, mongo_client).await
 }
