@@ -31,7 +31,7 @@ async fn img(
     let colle = db.collection::<Img>(&args.collection);
     info!("obtaining {} documents...", args.collection);
     let img_list = colle.find(doc! {}).await?.try_collect::<Vec<Img>>().await?;
-    info!("{} img documents", img_list.len());
+    let list_total = img_list.len();
     
     let interval = Duration::from_millis(args.interval_mil);
     let timeout = Duration::from_millis(args.timeout_mil);
@@ -41,11 +41,13 @@ async fn img(
         None => &args.img_path 
     };    
 
-    let mut it = 0;
+    let mut it = 0u32;
+    let mut total = 0u32;
     for img in img_list {
         let url = Url::parse(&img.img)?;
-        let path = format!("{img_root}{}", url.path());
-        if fs::try_exists(path).await? {
+        let file_name = format!("{img_root}{}", url.path());
+        if fs::try_exists(&file_name).await? {
+            total += 1;
             continue;
         }
 
@@ -53,18 +55,19 @@ async fn img(
             http_client.clone(), 
             timeout,
             &img.img, 
-            &args.img_path
+            &file_name
         ).await {
             warn!("{e}");
         };
 
+        total += 1;
         it += 1;
+        info!("iteration {it} {total}/{list_total}"); 
         if it >= args.iteration {
             info!("quit on max iteration");
             break;
         }
         
-        info!("iteration {it}"); 
         time::sleep(interval).await;
     }
 
