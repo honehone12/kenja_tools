@@ -64,6 +64,7 @@ async fn img(
         it += 1;
 
         if it >= args.iteration {
+            info!("quit on max iteration");
             break;
         }
         
