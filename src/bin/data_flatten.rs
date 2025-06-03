@@ -28,6 +28,10 @@ struct Args {
     include_empty: bool,
     #[arg(long, default_value_t = 1965)]
     oldest: i32,
+    #[arg(long, default_value_t = 2)]
+    anime_likes: u64,
+    #[arg(long, default_value_t = 2)]
+    chara_likes: u64,
     #[arg(long, value_enum)]
     rating: Rating
 }
@@ -45,8 +49,8 @@ async fn flatten(args: Args, mongo_client: MongoClient)
     let chara = env::var("CHARA_CL")?;
     let chara_colle = source_db.collection::<CharacterDocument>(&chara);
     let mut flat = args.rating.as_suffix(&env::var("FLAT_CL")?);
-    if !args.include_empty {
-        flat.push_str("_non_null");
+    if args.include_empty {
+        flat.push_str("_null");
     }
     let flat_colle = dest_db.collection::<FlatDocument>(&flat);
 
@@ -137,6 +141,10 @@ async fn flatten(args: Args, mongo_client: MongoClient)
                     None => continue
                 };
 
+                if chara.favorites < args.chara_likes {
+                    continue;
+                }
+
                 batch.push(FlatDocument{
                     item_id: ItemId { 
                         id: chara.mal_id, 
@@ -160,7 +168,7 @@ async fn flatten(args: Args, mongo_client: MongoClient)
         }
 
         if !args.include_empty {
-        match &anime.synopsis {
+            match &anime.synopsis {
                 Some(s) => {
                     if s.len() == 0 {
                         continue;
@@ -171,18 +179,22 @@ async fn flatten(args: Args, mongo_client: MongoClient)
         }
 
         let img = match anime.images {
-                    Some(i) => {
-                        let Some(u) = i.jpg else {
-                            continue
-                        };
-
-                        match u.image_url {
-                            Some(url) => url,
-                            None => continue
-                        }
-                    }
-                    None => continue
+            Some(i) => {
+                let Some(u) = i.jpg else {
+                    continue
                 };
+
+                match u.image_url {
+                    Some(url) => url,
+                    None => continue
+                }
+            }
+            None => continue
+        };
+
+        if anime.favorites < args.anime_likes {
+            continue;
+        }
 
         batch.push(FlatDocument{
             item_id: ItemId{

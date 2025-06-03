@@ -35,7 +35,8 @@ pub struct AnimeDocument {
     pub synopsis: Option<String>,
     pub season: Option<String>,
     pub genres: Vec<Genre>,
-    pub themes: Vec<Genre>
+    pub themes: Vec<Genre>,
+    pub favorites: u64
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -46,7 +47,8 @@ pub struct CharacterDocument {
     pub name: String,
     pub name_kanji: Option<String>,
     pub nicknames: Vec<String>,
-    pub about: Option<String>
+    pub about: Option<String>,
+    pub favorites: u64
 }
 
 
