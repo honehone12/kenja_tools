@@ -15,9 +15,6 @@ use kenja_tools::{
         anime_search::{
             FlatDocument, Parent
         },
-        id:: {
-            ItemId, ItemType
-        } 
     }
 };
 
@@ -28,9 +25,9 @@ struct Args {
     include_empty: bool,
     #[arg(long, default_value_t = 1965)]
     oldest: i32,
-    #[arg(long, default_value_t = 2)]
+    #[arg(long, default_value_t = 3)]
     anime_likes: u64,
-    #[arg(long, default_value_t = 2)]
+    #[arg(long, default_value_t = 5)]
     chara_likes: u64,
     #[arg(long, value_enum)]
     rating: Rating
@@ -38,7 +35,6 @@ struct Args {
 
 async fn flatten(args: Args, mongo_client: MongoClient) 
 -> anyhow::Result<()> {
-
     let source_db = mongo_client.database(&env::var("POOL_DB")?);
     let dest_db = mongo_client.database(&env::var("SEARCH_DB")?);
 
@@ -98,6 +94,54 @@ async fn flatten(args: Args, mongo_client: MongoClient)
             None => continue
         };
 
+        if !args.include_empty {
+            match &anime.synopsis {
+                Some(s) => {
+                    if s.len() == 0 {
+                        continue;
+                    }
+                }
+                None => continue
+            }
+        }
+
+        let img = match anime.images {
+            Some(i) => {
+                let Some(u) = i.jpg else {
+                    continue
+                };
+
+                match u.image_url {
+                    Some(url) => url,
+                    None => continue
+                }
+            }
+            None => continue
+        };
+
+        if anime.favorites < args.anime_likes {
+            continue;
+        }
+
+        if let Some(s) = &mut anime.synopsis {
+            s.retain(|c| !c.is_whitespace());
+        }
+
+        let res = flat_colle.insert_one(FlatDocument{
+            url: anime.url,
+            img,
+            parent: None,
+            name: anime.title.clone(),
+            name_english: anime.title_english,
+            name_japanese: anime.title_japanese.clone(),
+            aliases: anime.title_synonyms,
+            description: anime.synopsis,
+        }).await?;
+
+        let Some(parent_id) = res.inserted_id.as_object_id() else {
+            bail!("inserted object id is empty")
+        };
+
         if let Some(idx) = ani_chara_list
             .iter_mut()
             .position(|b| b.mal_id == anime.mal_id)
@@ -150,14 +194,10 @@ async fn flatten(args: Args, mongo_client: MongoClient)
                 }
 
                 batch.push(FlatDocument{
-                    item_id: ItemId { 
-                        id: chara.mal_id, 
-                        item_type: ItemType::Character 
-                    },
                     url: chara.url,
                     img,
                     parent: Some(Parent{
-                        id: anime.mal_id,
+                        id: parent_id,
                         name: anime.title.clone(),
                         name_japanese: anime.title_japanese.clone(),
                     }),
@@ -170,54 +210,6 @@ async fn flatten(args: Args, mongo_client: MongoClient)
                 inserted_chara_list.push(chara.mal_id);
             }
         }
-
-        if !args.include_empty {
-            match &anime.synopsis {
-                Some(s) => {
-                    if s.len() == 0 {
-                        continue;
-                    }
-                }
-                None => continue
-            }
-        }
-
-        let img = match anime.images {
-            Some(i) => {
-                let Some(u) = i.jpg else {
-                    continue
-                };
-
-                match u.image_url {
-                    Some(url) => url,
-                    None => continue
-                }
-            }
-            None => continue
-        };
-
-        if anime.favorites < args.anime_likes {
-            continue;
-        }
-
-        if let Some(s) = &mut anime.synopsis {
-            s.retain(|c| !c.is_whitespace());
-        }
-
-        batch.push(FlatDocument{
-            item_id: ItemId{
-                id: anime.mal_id,
-                item_type: ItemType::Anime
-            },
-            url: anime.url,
-            img,
-            parent: None,
-            name: anime.title,
-            name_english: anime.title_english,
-            name_japanese: anime.title_japanese,
-            aliases: anime.title_synonyms,
-            description: anime.synopsis,
-        });
 
         if batch.len() >= 100 {
             let result = flat_colle.insert_many(&batch).await?;
