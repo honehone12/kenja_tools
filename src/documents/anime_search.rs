@@ -1,6 +1,15 @@
 use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize, };
+use serde_repr::{Serialize_repr, Deserialize_repr};
 use serde_with::skip_serializing_none;
+
+#[derive(Serialize_repr, Deserialize_repr, PartialEq, Eq, Clone, Copy, Debug)]
+#[repr(i32)]
+pub enum ItemType {
+    Unspecified = 0,
+    Anime = 1,
+    Character = 2
+}
 
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -13,6 +22,7 @@ pub struct Parent {
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct FlatDocument {
+    pub item_type: ItemType,
     pub url: String,
     pub img: String,
     pub parent: Option<Parent>,

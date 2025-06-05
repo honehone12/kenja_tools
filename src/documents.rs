@@ -1,4 +1,3 @@
-pub mod id;
 pub mod anime;
 pub mod anime_search;
 pub mod anime_raw;

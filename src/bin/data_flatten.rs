@@ -6,16 +6,15 @@ use futures::TryStreamExt;
 use mongodb::{bson::doc, Client as MongoClient};
 use tracing::info;
 use kenja_tools::{
-    is_expected_media_type,
     documents::{
-        Rating,
         anime::{
             AniCharaBridge, AnimeDocument, CharacterDocument, 
-        },
+        }, 
         anime_search::{
-            FlatDocument, Parent
-        },
-    }
+            FlatDocument, ItemType, Parent
+        }, 
+        Rating
+    }, is_expected_media_type
 };
 
 #[derive(Parser)]
@@ -128,6 +127,7 @@ async fn flatten(args: Args, mongo_client: MongoClient)
         }
 
         let res = flat_colle.insert_one(FlatDocument{
+            item_type: ItemType::Anime,
             url: anime.url,
             img,
             parent: None,
@@ -194,6 +194,7 @@ async fn flatten(args: Args, mongo_client: MongoClient)
                 }
 
                 batch.push(FlatDocument{
+                    item_type: ItemType::Character,
                     url: chara.url,
                     img,
                     parent: Some(Parent{
