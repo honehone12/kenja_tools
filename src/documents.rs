@@ -28,4 +28,12 @@ impl Rating {
         s.insert_str(0, source);
         s
     }
+
+    #[inline]
+    pub fn to_32(&self) -> anime_search::Rating32 {
+        match self {
+            Rating::AllAges => anime_search::Rating32::AllAges,
+            Rating::Hentai => anime_search::Rating32::Hentai,
+        }
+    }
 }

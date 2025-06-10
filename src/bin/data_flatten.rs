@@ -29,7 +29,9 @@ struct Args {
     #[arg(long, default_value_t = 5)]
     chara_likes: u64,
     #[arg(long, value_enum)]
-    rating: Rating
+    rating: Rating,
+    #[arg(long, default_value = "flat")]
+    target: String
 }
 
 async fn flatten(args: Args, mongo_client: MongoClient) 
@@ -43,7 +45,7 @@ async fn flatten(args: Args, mongo_client: MongoClient)
     let ani_chara_colle = source_db.collection::<AniCharaBridge>(&ani_chara);
     let chara = env::var("CHARA_CL")?;
     let chara_colle = source_db.collection::<CharacterDocument>(&chara);
-    let mut flat = args.rating.as_suffix(&env::var("FLAT_CL")?);
+    let mut flat = args.target.clone();
     if args.include_empty {
         flat.push_str("_null");
     }
@@ -124,6 +126,7 @@ async fn flatten(args: Args, mongo_client: MongoClient)
 
         let res = flat_colle.insert_one(FlatDocument{
             item_type: ItemType::Anime,
+            rating: args.rating.to_32(),
             url: anime.url,
             img,
             parent: None,
@@ -189,6 +192,7 @@ async fn flatten(args: Args, mongo_client: MongoClient)
 
                 batch.push(FlatDocument{
                     item_type: ItemType::Character,
+                    rating: args.rating.to_32(),
                     url: chara.url,
                     img,
                     parent: Some(Parent{

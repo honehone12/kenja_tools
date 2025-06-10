@@ -11,6 +11,14 @@ pub enum ItemType {
     Character = 2
 }
 
+#[derive(Serialize_repr, Deserialize_repr, PartialEq, Eq, Clone, Copy, Debug)]
+#[repr(i32)]
+pub enum Rating32 {
+    Unspecified = 0,
+    AllAges = 1,
+    Hentai = 2
+}
+
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Parent {
@@ -23,6 +31,7 @@ pub struct Parent {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct FlatDocument {
     pub item_type: ItemType,
+    pub rating: Rating32,
     pub url: String,
     pub img: String,
     pub parent: Option<Parent>,
