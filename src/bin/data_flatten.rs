@@ -73,7 +73,7 @@ async fn flatten(args: Args, mongo_client: MongoClient)
     info!("start flattening");
     let mut batch = vec![];
     let mut inserted_chara_list = vec![];
-    for mut anime in ani_list {
+    for anime in ani_list {
         match anime.aired.from {
             Some(s) => {
                 let date = NaiveDate::parse_from_str(&s, &chrono_fmt)?;
@@ -122,15 +122,6 @@ async fn flatten(args: Args, mongo_client: MongoClient)
             continue;
         }
 
-        if let Some(s) = &mut anime.synopsis {
-            s.retain(|c| {
-                if c.is_whitespace() {
-                    return c == ' ';
-                }
-                true
-            });
-        }
-
         let res = flat_colle.insert_one(FlatDocument{
             item_type: ItemType::Anime,
             url: anime.url,
@@ -162,7 +153,7 @@ async fn flatten(args: Args, mongo_client: MongoClient)
                     continue;
                 };
 
-                let mut chara = chara_list.remove(idx);
+                let chara = chara_list.remove(idx);
                 if inserted_chara_list.contains(&chara.mal_id) {
                     continue;
                 }
@@ -194,15 +185,6 @@ async fn flatten(args: Args, mongo_client: MongoClient)
 
                 if chara.favorites < args.chara_likes {
                     continue;
-                }
-
-                if let Some(s) = &mut chara.about {
-                    s.retain(|c| {
-                        if c.is_whitespace() {
-                            return c == ' ';
-                        }
-                        true
-                    });
                 }
 
                 batch.push(FlatDocument{
