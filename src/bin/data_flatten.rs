@@ -123,7 +123,12 @@ async fn flatten(args: Args, mongo_client: MongoClient)
         }
 
         if let Some(s) = &mut anime.synopsis {
-            s.retain(|c| !c.is_whitespace());
+            s.retain(|c| {
+                if c.is_whitespace() {
+                    return c == ' ';
+                }
+                true
+            });
         }
 
         let res = flat_colle.insert_one(FlatDocument{
@@ -192,7 +197,12 @@ async fn flatten(args: Args, mongo_client: MongoClient)
                 }
 
                 if let Some(s) = &mut chara.about {
-                    s.retain(|c| !c.is_whitespace());
+                    s.retain(|c| {
+                        if c.is_whitespace() {
+                            return c == ' ';
+                        }
+                        true
+                    });
                 }
 
                 batch.push(FlatDocument{
