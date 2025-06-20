@@ -16,7 +16,7 @@ struct Args {
     #[arg(long, default_value_t = 1500)]
     interval_mil: u64,
     #[arg(long, default_value_t = 5000)]
-    timeout: u64
+    timeout_mil: u64
 }
 
 async fn req_quarter_list(
@@ -30,7 +30,7 @@ async fn req_quarter_list(
     let base_url = env::var("BASE_URL")?;
 
     let interval = Duration::from_millis(args.interval_mil);
-    let timeout = Duration::from_millis(args.timeout);
+    let timeout = Duration::from_millis(args.timeout_mil);
 
     let url = format!("{base_url}/seasons/{}/{}", args.year, args.season);
     let list = request_pages(http_client, interval, timeout, &url).await?;

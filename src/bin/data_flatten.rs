@@ -29,9 +29,7 @@ struct Args {
     #[arg(long, default_value_t = 5)]
     chara_likes: u64,
     #[arg(long, value_enum)]
-    rating: Rating,
-    #[arg(long, default_value = "flat")]
-    target: String
+    rating: Rating
 }
 
 async fn flatten(args: Args, mongo_client: MongoClient) 
@@ -45,7 +43,7 @@ async fn flatten(args: Args, mongo_client: MongoClient)
     let ani_chara_colle = source_db.collection::<AniCharaBridge>(&ani_chara);
     let chara = env::var("CHARA_CL")?;
     let chara_colle = source_db.collection::<CharacterDocument>(&chara);
-    let mut flat = args.target.clone();
+    let mut flat = env::var("FLAT_CL")?;
     if args.include_empty {
         flat.push_str("_null");
     }
