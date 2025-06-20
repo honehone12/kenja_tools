@@ -9,6 +9,13 @@ pub struct AnimeCharacters {
     pub characters: Vec<Value>
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+
+pub struct AnimeStaffs {
+    pub mal_id: i64,
+    pub staffs: Vec<Value>
+}
+
 #[derive(ValueEnum, Clone, Debug)]
 pub enum Season {
     Winter,
@@ -26,10 +33,4 @@ impl Display for Season {
             Season::Fall => f.write_str("fall"),
         }
     }
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct AnimeStaff {
-    pub mal_id: i64,
-    pub staffs: Vec<Value>
 }

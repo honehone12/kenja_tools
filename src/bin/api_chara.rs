@@ -4,7 +4,7 @@ use mongodb::Client as MongoClient;
 use reqwest::Client as HttpClient;
 use clap::Parser;
 use serde_json::Value;
-use tracing::info;
+use tracing::{info, warn};
 use kenja_tools::api::{paged_url, request};
 
 #[derive(Parser)]
@@ -39,7 +39,7 @@ async fn req_top_chara(
         let (data, pagination) = request(&http_client, timeout, &url).await?;
 
         if data.is_empty() {
-            info!("data is empty");
+            warn!("data is empty");
         } else {
             let res = collection.insert_many(data).await?;
             info!("inserted {}items", res.inserted_ids.len());

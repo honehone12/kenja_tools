@@ -41,7 +41,7 @@ async fn req_ani_chara(
                 Err(e) => warn!("request failed. {e}. skipping"),
                 Ok((data, _)) => {
                     if data.is_empty() {
-                        info!("data is empty");
+                        warn!("data is empty");
                     } else {
                         let anime_chara = AnimeCharacters{
                             mal_id: *mal_id,

@@ -1,5 +1,6 @@
 use std::{env, time::Duration};
 use clap::Parser;
+use kenja_tools::{api::request, documents::anime_raw::AnimeStaffs};
 use mongodb::{bson::{Bson, doc}, Client as MongoClient};
 use reqwest::Client as HttpClient;
 use serde_json::Value;
@@ -22,7 +23,7 @@ async fn req_staff(
 ) -> anyhow::Result<()> {
     let db = mongo_client.database(&env::var("POOL_DB")?);
     let src_cl = db.collection::<Value>(&env::var("ANI_CL")?);
-    let staff_cl = db.collection::<Value>(&env::var("STAFF_CL")?);
+    let staff_cl = db.collection::<AnimeStaffs>(&env::var("STAFF_CL")?);
     
     let base_url = env::var("BASE_URL")?;
 
@@ -35,6 +36,22 @@ async fn req_staff(
     for (i, bson) in list.iter().enumerate() {
         if let Bson::Int64(mal_id) = bson {
             info!("{i}/{total}");
+            let url = format!("{base_url}/anime/{mal_id}/staff");
+            match request(&http_client, timeout, &url).await {
+                Err(e) => warn!("request failed. {e}. skipping"),
+                Ok((data, _)) => {
+                    if data.is_empty() {
+                        warn!("data is empty");
+                    } else {
+                        let anime_staffs = AnimeStaffs{
+                            mal_id: *mal_id,
+                            staffs: data
+                        };
+                        _ = staff_cl.insert_one(anime_staffs).await?;
+                        info!("inserted a item");
+                    }
+                }
+            }
         } else {
             warn!("skipping unexpected value {i}/{total} {bson}");
         }
@@ -53,10 +70,9 @@ async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
     let mongo_uri = env::var("MONGO_URI")?;
-    let mong_client = MongoClient::with_uri_str(mongo_uri).await?;
+    let mongo_client = MongoClient::with_uri_str(mongo_uri).await?;
 
     let http_client = HttpClient::new();
 
-
-    Ok(())
+    req_staff(args, mongo_client, http_client).await
 }
