@@ -11,7 +11,7 @@ use kenja_tools::{
             AniCharaBridge, AnimeDocument, CharacterDocument, 
         }, 
         anime_search::{
-            FlatDocument, ItemType, Parent
+            FlatDocument, ItemType32, Parent
         }, 
         Rating
     }, is_expected_media_type
@@ -34,20 +34,20 @@ struct Args {
 
 async fn flatten(args: Args, mongo_client: MongoClient) 
 -> anyhow::Result<()> {
-    let source_db = mongo_client.database(&env::var("POOL_DB")?);
-    let dest_db = mongo_client.database(&env::var("SEARCH_DB")?);
+    let src_db = mongo_client.database(&env::var("POOL_DB")?);
+    let dst_db = mongo_client.database(&env::var("SEARCH_DB")?);
 
     let ani = args.rating.as_suffix(&env::var("ANI_CL")?);
-    let ani_colle = source_db.collection::<AnimeDocument>(&ani);
+    let ani_colle = src_db.collection::<AnimeDocument>(&ani);
     let ani_chara = env::var("ANI_CHARA_CL")?;
-    let ani_chara_colle = source_db.collection::<AniCharaBridge>(&ani_chara);
+    let ani_chara_colle = src_db.collection::<AniCharaBridge>(&ani_chara);
     let chara = env::var("CHARA_CL")?;
-    let chara_colle = source_db.collection::<CharacterDocument>(&chara);
+    let chara_colle = src_db.collection::<CharacterDocument>(&chara);
     let mut flat = env::var("FLAT_CL")?;
     if args.include_empty {
         flat.push_str("_null");
     }
-    let flat_colle = dest_db.collection::<FlatDocument>(&flat);
+    let flat_colle = dst_db.collection::<FlatDocument>(&flat);
 
     info!("obtaining {ani} documents...");
     let mut ani_list = ani_colle.find(doc! {}).await?
@@ -123,7 +123,7 @@ async fn flatten(args: Args, mongo_client: MongoClient)
         }
 
         let res = flat_colle.insert_one(FlatDocument{
-            item_type: ItemType::Anime,
+            item_type: ItemType32::Anime,
             rating: args.rating.to_32(),
             url: anime.url,
             img,
@@ -189,7 +189,7 @@ async fn flatten(args: Args, mongo_client: MongoClient)
                 }
 
                 batch.push(FlatDocument{
-                    item_type: ItemType::Character,
+                    item_type: ItemType32::Character,
                     rating: args.rating.to_32(),
                     url: chara.url,
                     img,

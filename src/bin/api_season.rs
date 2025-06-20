@@ -33,7 +33,7 @@ async fn req_quarter_list(
     let timeout = Duration::from_millis(args.timeout_mil);
 
     let url = format!("{base_url}/seasons/{}/{}", args.year, args.season);
-    let list = request_pages(http_client, interval, timeout, &url).await?;
+    let list = request_pages(&http_client, interval, timeout, &url).await?;
 
     if list.is_empty() {
         info!("list is empty");

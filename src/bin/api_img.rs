@@ -52,7 +52,7 @@ async fn img(
         }
 
         if let Err(e) = request_img(
-            http_client.clone(), 
+            &http_client, 
             timeout,
             &img.img, 
             &file_name

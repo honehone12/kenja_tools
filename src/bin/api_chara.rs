@@ -36,7 +36,7 @@ async fn req_top_chara(
         page += 1;
 
         let url = paged_url(&url, page);
-        let (data, pagination) = request(http_client.clone(), timeout, &url).await?;
+        let (data, pagination) = request(&http_client, timeout, &url).await?;
 
         if data.is_empty() {
             info!("data is empty");

@@ -27,3 +27,9 @@ impl Display for Season {
         }
     }
 }
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct AnimeStaff {
+    pub mal_id: i64,
+    pub staffs: Vec<Value>
+}

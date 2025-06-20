@@ -1,7 +1,10 @@
-use std::env;
+use std::{env, time::Duration};
 use clap::Parser;
-use mongodb::Client as MongoClient;
+use mongodb::{bson::{Bson, doc}, Client as MongoClient};
 use reqwest::Client as HttpClient;
+use serde_json::Value;
+use tokio::time;
+use tracing::{info, warn};
 
 #[derive(Parser)]
 #[command(version)]
@@ -12,7 +15,36 @@ struct Args {
     timeout_mil: u64
 }
 
+async fn req_staff(
+    args: Args,
+    mongo_client: MongoClient,
+    http_client: HttpClient
+) -> anyhow::Result<()> {
+    let db = mongo_client.database(&env::var("POOL_DB")?);
+    let src_cl = db.collection::<Value>(&env::var("ANI_CL")?);
+    let staff_cl = db.collection::<Value>(&env::var("STAFF_CL")?);
+    
+    let base_url = env::var("BASE_URL")?;
 
+    let interval = Duration::from_millis(args.interval_mil);
+    let timeout = Duration::from_millis(args.timeout_mil);
+
+    let list = src_cl.distinct("mal_id", doc! {}).await?;
+    let total = list.len();
+
+    for (i, bson) in list.iter().enumerate() {
+        if let Bson::Int64(mal_id) = bson {
+            info!("{i}/{total}");
+        } else {
+            warn!("skipping unexpected value {i}/{total} {bson}");
+        }
+
+        time::sleep(interval).await;
+    }
+
+    info!("done");
+    Ok(())
+}
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {

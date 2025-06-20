@@ -5,6 +5,8 @@ pub mod anime_raw;
 use std::fmt::{Display, Formatter, Result as FmtResult};
 use clap::ValueEnum;
 
+use crate::documents::anime_search::ItemType32;
+
 #[derive(ValueEnum, Clone, Debug)]
 pub enum Rating {
     AllAges,
@@ -34,6 +36,31 @@ impl Rating {
         match self {
             Rating::AllAges => anime_search::Rating32::AllAges,
             Rating::Hentai => anime_search::Rating32::Hentai,
+        }
+    }
+}
+
+#[derive(ValueEnum, Clone, Debug)]
+pub enum ItemType {
+    Anime,
+    Chara
+}
+
+impl Display for ItemType {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        match self {
+            ItemType::Anime => f.write_str("anime"),
+            ItemType::Chara=> f.write_str("character")
+        }
+    }
+}
+
+impl ItemType {
+    #[inline]
+    pub fn to_32(&self) -> anime_search::ItemType32 {
+        match self {
+            ItemType::Anime => ItemType32::Anime,
+            ItemType::Chara => ItemType32::Character
         }
     }
 }

@@ -7,7 +7,7 @@ use tracing::info;
 use anyhow::bail;
 
 pub async fn request(
-    http_client: HttpClient, 
+    http_client: &HttpClient, 
     timeout: Duration,
     url: &str
 ) 
@@ -46,7 +46,7 @@ pub fn paged_url(url: &str, page: u32) -> String {
 }
 
 pub async fn request_pages(
-    http_client: HttpClient,
+    http_client: &HttpClient,
     interval: Duration,
     timeout: Duration,
     url: &str
@@ -58,8 +58,7 @@ pub async fn request_pages(
         page += 1;
         
         let url = paged_url(url, page);
-        let client = http_client.clone();
-        let (mut data, pagination) = request(client, timeout, &url).await?;
+        let (mut data, pagination) = request(http_client, timeout, &url).await?;
         list.append(&mut data);
 
         if !matches!(pagination["has_next_page"], Value::Bool(true)) {
@@ -73,7 +72,7 @@ pub async fn request_pages(
 }
 
 pub async fn request_img(
-    http_client: HttpClient,
+    http_client: &HttpClient,
     timeout: Duration,
     url: &str,
     file_name: &str,

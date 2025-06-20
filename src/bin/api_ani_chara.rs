@@ -36,8 +36,8 @@ async fn req_ani_chara(
     for (i, bson) in list.iter().enumerate() {
         if let Bson::Int64(mal_id) = bson {
             info!("{i}/{total}");
-            let url = format!("{}/anime/{mal_id}/characters", base_url);
-            match request(http_client.clone(), timeout, &url).await {
+            let url = format!("{base_url}/anime/{mal_id}/characters");
+            match request(&http_client, timeout, &url).await {
                 Err(e) => warn!("request failed. {e}. skipping"),
                 Ok((data, _)) => {
                     if data.is_empty() {
