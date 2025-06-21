@@ -39,7 +39,7 @@ async fn req_top_chara(
         let (data, pagination) = request(&http_client, timeout, &url).await?;
 
         if data.is_empty() {
-            warn!("data is empty");
+            info!("data is empty");
         } else {
             let res = collection.insert_many(data).await?;
             info!("inserted {}items", res.inserted_ids.len());
