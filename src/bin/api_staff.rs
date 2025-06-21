@@ -1,5 +1,6 @@
 use std::{env, time::Duration};
 use clap::Parser;
+use futures::TryStreamExt;
 use kenja_tools::{api::request, documents::anime_raw::AnimeStaffs};
 use mongodb::{bson::{Bson, doc}, Client as MongoClient};
 use reqwest::Client as HttpClient;
@@ -30,11 +31,18 @@ async fn req_staff(
     let interval = Duration::from_millis(args.interval_mil);
     let timeout = Duration::from_millis(args.timeout_mil);
 
+    let done_list = staff_cl.find(doc! {}).await?
+        .try_collect::<Vec<AnimeStaffs>>().await?;
+
     let list = src_cl.distinct("mal_id", doc! {}).await?;
     let total = list.len();
 
     for (i, bson) in list.iter().enumerate() {
         if let Bson::Int64(mal_id) = bson {
+            if done_list.iter().find(|s| s.mal_id == *mal_id).is_some() {
+                continue;
+            }
+
             info!("{i}/{total}");
             let url = format!("{base_url}/anime/{mal_id}/staff");
             match request(&http_client, timeout, &url).await {
