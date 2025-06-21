@@ -4,7 +4,7 @@ use mongodb::Client as MongoClient;
 use reqwest::Client as HttpClient;
 use clap::Parser;
 use serde_json::Value;
-use tracing::{info, warn};
+use tracing::info;
 use kenja_tools::api::{paged_url, request};
 
 #[derive(Parser)]
