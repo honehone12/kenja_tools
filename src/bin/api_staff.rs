@@ -13,7 +13,7 @@ use tracing::{info, warn};
 struct Args {
     #[arg(long, default_value_t = 1500)]
     interval_mil: u64,
-    #[arg(long, default_value_t = 5000)]
+    #[arg(long, default_value_t = 10000)]
     timeout_mil: u64
 }
 
