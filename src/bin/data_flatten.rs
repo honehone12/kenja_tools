@@ -8,7 +8,7 @@ use tracing::info;
 use kenja_tools::{
     documents::{
         anime::{
-            AniCharaBridge, AnimeDocument, CharacterDocument, 
+            AniCharaBridge, AnimeDocument, CharacterDocument, StaffDocument, 
         }, 
         anime_search::{
             FlatDocument, ItemType32, Parent
@@ -43,6 +43,8 @@ async fn flatten(args: Args, mongo_client: MongoClient)
     let ani_chara_colle = src_db.collection::<AniCharaBridge>(&ani_chara);
     let chara = env::var("CHARA_CL")?;
     let chara_colle = src_db.collection::<CharacterDocument>(&chara);
+    let staff = env::var("STAFF_CL")?;
+    let staff_cl = src_db.collection::<StaffDocument>(&staff);
     let mut flat = env::var("FLAT_CL")?;
     if args.include_empty {
         flat.push_str("_null");

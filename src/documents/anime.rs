@@ -21,6 +21,11 @@ pub struct Images {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct Studio {
+    pub name: String
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct AnimeDocument {
     pub mal_id: i64,
     pub url: String,
@@ -34,8 +39,7 @@ pub struct AnimeDocument {
     pub title_synonyms: Vec<String>,
     pub synopsis: Option<String>,
     pub season: Option<String>,
-    pub genres: Vec<Genre>,
-    pub themes: Vec<Genre>,
+    pub studios: Vec<Studio>,
     pub favorites: u64
 }
 
@@ -51,6 +55,10 @@ pub struct CharacterDocument {
     pub favorites: u64
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct Person {
+    pub name: String
+}
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Character {
@@ -58,13 +66,30 @@ pub struct Character {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct VoiceActor {
+    pub person: Person
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct CharacterCast {
-    pub character: Character
-    // voice_actors etc...
+    pub character: Character,
+    pub voice_actors: Vec<VoiceActor>
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct AniCharaBridge {
     pub mal_id: i64,
     pub characters: Vec<CharacterCast>
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct Staff {
+    pub person: Person,
+    pub positions: Vec<String>
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct StaffDocument {
+    pub mal_id: i64,
+    pub staffs: Vec<Staff>
 }
