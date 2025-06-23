@@ -8,10 +8,17 @@ use tracing::info;
 use kenja_tools::{
     documents::{
         anime::{
-            AniCharaBridge, AnimeDocument, CharacterDocument, StaffDocument, 
+            AniCharaBridge, 
+            AnimeDocument, 
+            CharacterDocument, 
+            ImageUrls, 
+            Images, 
+            StaffDocument 
         }, 
         anime_search::{
-            FlatDocument, ItemType32, Parent
+            FlatDocument, 
+            ItemType32, 
+            Parent
         }, 
         Rating
     }, is_expected_media_type
@@ -20,13 +27,11 @@ use kenja_tools::{
 #[derive(Parser)]
 #[command(version)]
 struct Args {
-    #[arg(long, default_value_t = false)]
-    include_empty: bool,
     #[arg(long, default_value_t = 1965)]
     oldest: i32,
-    #[arg(long, default_value_t = 3)]
+    #[arg(long, default_value_t = 0)]
     anime_likes: u64,
-    #[arg(long, default_value_t = 5)]
+    #[arg(long, default_value_t = 0)]
     chara_likes: u64,
     #[arg(long, value_enum)]
     rating: Rating
@@ -38,33 +43,27 @@ async fn flatten(args: Args, mongo_client: MongoClient)
     let dst_db = mongo_client.database(&env::var("SEARCH_DB")?);
 
     let ani = args.rating.as_suffix(&env::var("ANI_CL")?);
-    let ani_colle = src_db.collection::<AnimeDocument>(&ani);
-    let ani_chara = env::var("ANI_CHARA_CL")?;
-    let ani_chara_colle = src_db.collection::<AniCharaBridge>(&ani_chara);
-    let chara = env::var("CHARA_CL")?;
-    let chara_colle = src_db.collection::<CharacterDocument>(&chara);
-    let staff = env::var("STAFF_CL")?;
-    let staff_cl = src_db.collection::<StaffDocument>(&staff);
-    let mut flat = env::var("FLAT_CL")?;
-    if args.include_empty {
-        flat.push_str("_null");
-    }
-    let flat_colle = dst_db.collection::<FlatDocument>(&flat);
+    let ani_cl = src_db.collection::<AnimeDocument>(&ani);
+    let ani_chara_cl = src_db.collection::<AniCharaBridge>(&env::var("ANI_CHARA_CL")?);
+    let chara_cl = src_db.collection::<CharacterDocument>(&env::var("CHARA_CL")?);
+    let staff_cl = src_db.collection::<StaffDocument>(&env::var("STAFF_CL")?);
+    let flat_cl = dst_db.collection::<FlatDocument>(&env::var("FLAT_CL")?);
 
-    info!("obtaining {ani} documents...");
-    let mut ani_list = ani_colle.find(doc! {}).await?
+    let mut ani_list = ani_cl.find(doc! {}).await?
         .try_collect::<Vec<AnimeDocument>>().await?;
     ani_list.sort_unstable_by_key(|d| d.mal_id);
     info!("{} anime documents", ani_list.len());
     
-    info!("obtaining {ani_chara} bridge...");
-    let mut ani_chara_list = ani_chara_colle.find(doc! {}).await?
+    let mut ani_chara_list = ani_chara_cl.find(doc! {}).await?
         .try_collect::<Vec<AniCharaBridge>>().await?;
     info!("{} anime-chara bridges", ani_chara_list.len());
 
-    info!("obtaining {chara} documents...");
-    let mut chara_list = chara_colle.find(doc! {}).await?
+    let mut chara_list = chara_cl.find(doc! {}).await?
         .try_collect::<Vec<CharacterDocument>>().await?;
+    info!("{} character documets", chara_list.len());
+
+    let mut staff_list = staff_cl.find(doc! {}).await?
+        .try_collect::<Vec<StaffDocument>>().await?;
     info!("{} character documets", chara_list.len());
 
     let chrono_fmt = "%Y-%m-%dT%H:%M:%S%z";
@@ -87,44 +86,35 @@ async fn flatten(args: Args, mongo_client: MongoClient)
         };
 
         match anime.media_type {
-            Some(s) => {
-                if !is_expected_media_type(&s) {
-                    continue;
-                }
-            } 
-            None => continue
+            Some(s) if is_expected_media_type(&s) => (), 
+            _ => continue
         };
 
-        if !args.include_empty {
-            match &anime.synopsis {
-                Some(s) => {
-                    if s.len() == 0 {
-                        continue;
-                    }
-                }
-                None => continue
-            }
-        }
+        let synopsis = match anime.synopsis {
+            Some(s) if !s.is_empty() => s,
+            _ => continue
+        };
 
         let img = match anime.images {
-            Some(i) => {
-                let Some(u) = i.jpg else {
-                    continue
-                };
-
-                match u.image_url {
-                    Some(url) => url,
-                    None => continue
-                }
-            }
-            None => continue
+            Some(Images{jpg: Some(ImageUrls{image_url: Some(s)})}) => s,
+            _ => continue
         };
 
         if anime.favorites < args.anime_likes {
             continue;
         }
 
-        let res = flat_colle.insert_one(FlatDocument{
+        let Some(idx) = staff_list.iter().position(|s| s.mal_id == anime.mal_id) else {
+            continue;
+        };
+        let staff = staff_list.remove(idx);
+        let flat_staff = staff.staffs.iter().map(|s| s.person.name.clone())
+            .collect::<Vec<String>>().join(" ");
+
+        let studios = anime.studios.iter().map(|s| s.name.clone())
+            .collect::<Vec<String>>();
+
+        let res = flat_cl.insert_one(FlatDocument{
             item_type: ItemType32::Anime,
             rating: args.rating.to_32(),
             url: anime.url,
@@ -134,7 +124,9 @@ async fn flatten(args: Args, mongo_client: MongoClient)
             name_english: anime.title_english,
             name_japanese: anime.title_japanese.clone(),
             aliases: anime.title_synonyms,
-            description: anime.synopsis,
+            studios,
+            staff: flat_staff,
+            description: synopsis,
         }).await?;
 
         let Some(parent_id) = res.inserted_id.as_object_id() else {
@@ -143,14 +135,12 @@ async fn flatten(args: Args, mongo_client: MongoClient)
 
         info!("inserted a item");
 
-        if let Some(idx) = ani_chara_list
-            .iter_mut()
+        if let Some(idx) = ani_chara_list.iter_mut()
             .position(|b| b.mal_id == anime.mal_id)
         {
             let bridge = ani_chara_list.remove(idx);
             for cc in bridge.characters.iter() {
-                let Some(idx) = chara_list
-                    .iter_mut()
+                let Some(idx) = chara_list.iter_mut()
                     .position(|c| c.mal_id == cc.character.mal_id)
                 else {
                     continue;
@@ -161,34 +151,22 @@ async fn flatten(args: Args, mongo_client: MongoClient)
                     continue;
                 }
                 
-                if !args.include_empty {
-                    match &chara.about {
-                        Some(s) => {
-                            if s.len() == 0 {
-                                continue;
-                            }
-                        }
-                        None => continue
-                    }
-                }
+                let about = match chara.about {
+                    Some(s) if !s.is_empty() => s,
+                    _ => continue
+                };
 
                 let img = match chara.images {
-                    Some(i) => {
-                        let Some(u) = i.jpg else {
-                            continue
-                        };
-
-                        match u.image_url {
-                            Some(url) => url,
-                            None => continue
-                        }
-                    }
-                    None => continue
+                    Some(Images{jpg: Some(ImageUrls{image_url: Some(s)})}) => s,
+                    _ => continue
                 };
 
                 if chara.favorites < args.chara_likes {
                     continue;
                 }
+
+                let flat_voice_actor = cc.voice_actors.iter().map(|v| v.person.name.clone())
+                    .collect::<Vec<String>>().join(" ");
 
                 batch.push(FlatDocument{
                     item_type: ItemType32::Character,
@@ -204,21 +182,23 @@ async fn flatten(args: Args, mongo_client: MongoClient)
                     name_english: None,
                     name_japanese: chara.name_kanji,
                     aliases: chara.nicknames,
-                    description: chara.about,
+                    studios: vec![],
+                    staff: flat_voice_actor,
+                    description: about,
                 });
                 inserted_chara_list.push(chara.mal_id);
             }
         }
 
         if batch.len() >= 100 {
-            let result = flat_colle.insert_many(&batch).await?;
+            let result = flat_cl.insert_many(&batch).await?;
             info!("inserted {}items", result.inserted_ids.len());
             batch.clear();    
         }
     }
     
     if !batch.is_empty() {
-        let result = flat_colle.insert_many(&batch).await?;
+        let result = flat_cl.insert_many(&batch).await?;
         info!("inserted {}items", result.inserted_ids.len());
     }
     info!("done");

@@ -40,7 +40,10 @@ pub struct FlatDocument {
     pub name_japanese: Option<String>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub aliases: Vec<String>,
-    pub description: Option<String>
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub studios: Vec<String>,
+    pub staff: String,
+    pub description: String
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]

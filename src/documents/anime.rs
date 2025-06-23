@@ -85,7 +85,6 @@ pub struct AniCharaBridge {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Staff {
     pub person: Person,
-    pub positions: Vec<String>
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
