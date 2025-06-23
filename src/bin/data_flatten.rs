@@ -64,7 +64,7 @@ async fn flatten(args: Args, mongo_client: MongoClient)
 
     let mut staff_list = staff_cl.find(doc! {}).await?
         .try_collect::<Vec<StaffDocument>>().await?;
-    info!("{} character documets", chara_list.len());
+    info!("{} staff documets", staff_list.len());
 
     let chrono_fmt = "%Y-%m-%dT%H:%M:%S%z";
     let Some(oldest) = NaiveDate::from_yo_opt(args.oldest, 1) else {
