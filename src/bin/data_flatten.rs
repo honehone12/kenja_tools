@@ -29,9 +29,9 @@ use kenja_tools::{
 struct Args {
     #[arg(long, default_value_t = 1965)]
     oldest: i32,
-    #[arg(long, default_value_t = 0)]
+    #[arg(long, default_value_t = 3)]
     anime_likes: u64,
-    #[arg(long, default_value_t = 0)]
+    #[arg(long, default_value_t = 3)]
     chara_likes: u64,
     #[arg(long, value_enum)]
     rating: Rating
@@ -108,8 +108,9 @@ async fn flatten(args: Args, mongo_client: MongoClient)
             continue;
         };
         let staff = staff_list.remove(idx);
-        let flat_staff = staff.staffs.iter().map(|s| s.person.name.clone())
-            .collect::<Vec<String>>().join(" ");
+        let flat_staff = staff.staffs.iter()
+            .map(|s| s.person.name.replace(',', ""))
+            .collect::<Vec<String>>().join(" . ");
 
         let studios = anime.studios.iter().map(|s| s.name.clone())
             .collect::<Vec<String>>();
@@ -165,8 +166,9 @@ async fn flatten(args: Args, mongo_client: MongoClient)
                     continue;
                 }
 
-                let flat_voice_actor = cc.voice_actors.iter().map(|v| v.person.name.clone())
-                    .collect::<Vec<String>>().join(" ");
+                let flat_voice_actor = cc.voice_actors.iter()
+                    .map(|v| v.person.name.replace(',', ""))
+                    .collect::<Vec<String>>().join(" . ");
 
                 batch.push(FlatDocument{
                     item_type: ItemType32::Character,
