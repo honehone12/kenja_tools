@@ -108,9 +108,12 @@ async fn flatten(args: Args, mongo_client: MongoClient)
             continue;
         };
         let staff = staff_list.remove(idx);
+        if staff.staffs.is_empty() {
+            continue;
+        }
         let flat_staff = staff.staffs.iter()
             .map(|s| s.person.name.replace(',', ""))
-            .collect::<Vec<String>>().join(" . ");
+            .collect::<Vec<String>>().join(". ");
 
         let studios = anime.studios.iter().map(|s| s.name.clone())
             .collect::<Vec<String>>();
@@ -166,6 +169,9 @@ async fn flatten(args: Args, mongo_client: MongoClient)
                     continue;
                 }
 
+                if cc.voice_actors.is_empty() {
+                    continue;
+                }
                 let flat_voice_actor = cc.voice_actors.iter()
                     .map(|v| v.person.name.replace(',', ""))
                     .collect::<Vec<String>>().join(" . ");
