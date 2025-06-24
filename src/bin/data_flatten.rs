@@ -112,7 +112,7 @@ async fn flatten(args: Args, mongo_client: MongoClient)
             continue;
         }
         let flat_staff = staff.staffs.iter()
-            .map(|s| s.person.name.replace(',', ""))
+            .map(|s| s.person.name.replace(',', "").replace('.', ""))
             .collect::<Vec<String>>().join(". ");
 
         let studios = anime.studios.iter().map(|s| s.name.clone())
@@ -173,8 +173,8 @@ async fn flatten(args: Args, mongo_client: MongoClient)
                     continue;
                 }
                 let flat_voice_actor = cc.voice_actors.iter()
-                    .map(|v| v.person.name.replace(',', ""))
-                    .collect::<Vec<String>>().join(" . ");
+                    .map(|v| v.person.name.replace(',', "").replace('.', ""))
+                    .collect::<Vec<String>>().join(". ");
 
                 batch.push(FlatDocument{
                     item_type: ItemType32::Character,
