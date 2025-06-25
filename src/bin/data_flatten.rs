@@ -29,9 +29,9 @@ use kenja_tools::{
 struct Args {
     #[arg(long, default_value_t = 1965)]
     oldest: i32,
-    #[arg(long, default_value_t = 3)]
+    #[arg(long, default_value_t = 5)]
     anime_likes: u64,
-    #[arg(long, default_value_t = 3)]
+    #[arg(long, default_value_t = 5)]
     chara_likes: u64,
     #[arg(long, value_enum)]
     rating: Rating
