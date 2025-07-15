@@ -34,6 +34,9 @@ async fn req_chara(
 
     let base_url = env::var("BASE_API_URL")?;
     info!("getting flat url list");
+    let chara_list = chara_cl.distinct("mal_id", doc! {}).await?.iter()
+        .filter_map(|bson| bson.as_i64())
+        .collect::<Vec<i64>>();
     let flat_url_list = flat_cl.distinct("url", doc! {}).await?.iter()
         .filter_map(|bson| bson.as_str().map(|str| str.to_string()))
         .collect::<Vec<String>>();
@@ -44,6 +47,11 @@ async fn req_chara(
         for chara_cast in bridge.characters {
             if flat_url_list.iter()
                 .find(|url| **url == chara_cast.character.url).is_some() 
+            {
+                continue;
+            }
+            if chara_list.iter()
+                .find(|mal_id| **mal_id == chara_cast.character.mal_id).is_some()
             {
                 continue;
             }
