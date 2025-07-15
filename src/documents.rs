@@ -6,7 +6,8 @@ use std::fmt::{Display, Formatter, Result as FmtResult};
 use clap::ValueEnum;
 use crate::documents::anime_search::ItemType32;
 
-const HENTAI_RATING_STR: &'static str = "Rx - Hentai";
+const RX: &'static str = "Rx";
+const HENTAI: &'static str = "Hentai";
 
 #[derive(ValueEnum, Clone, Debug)]
 pub enum Rating {
@@ -41,10 +42,15 @@ impl Rating {
     }
 
     #[inline]
+    pub fn is_hentai_str(rating_str: &str) -> bool {
+        return rating_str.contains(RX) || rating_str.contains(HENTAI)
+    }
+
+    #[inline]
     pub fn match_str(&self, rating_str: &str) -> bool {
         match self {
-            Rating::AllAges => rating_str != HENTAI_RATING_STR,
-            Rating::Hentai => rating_str == HENTAI_RATING_STR
+            Rating::AllAges => !Self::is_hentai_str(rating_str),
+            Rating::Hentai => Self::is_hentai_str(rating_str)
         }
     }
 }
