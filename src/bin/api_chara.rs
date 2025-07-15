@@ -33,6 +33,7 @@ async fn req_chara(
     let timeout = Duration::from_millis(args.timeout_mil);
 
     let base_url = env::var("BASE_API_URL")?;
+    info!("getting flat url list");
     let flat_url_list = flat_cl.distinct("url", doc! {}).await?.iter()
         .filter_map(|bson| bson.as_str().map(|str| str.to_string()))
         .collect::<Vec<String>>();
@@ -58,9 +59,11 @@ async fn req_chara(
             time::sleep(interval).await;
         }
 
-        let res = chara_cl.insert_many(&batch).await?;
-        info!("inserted {} items", res.inserted_ids.len());
-        batch.clear();
+        if !batch.is_empty() {
+            let res = chara_cl.insert_many(&batch).await?;
+            info!("inserted {} items", res.inserted_ids.len());
+            batch.clear();
+        }
     }
 
     info!("done");
