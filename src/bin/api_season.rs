@@ -25,7 +25,7 @@ async fn req_quarter_list(
     http_client: HttpClient
 ) -> anyhow::Result<()> {
     let db = mongo_client.database(&env::var("SEASON_DB")?);
-    let collection = db.collection::<Value>(&env::var("SEASON_CL")?);
+    let collection = db.collection::<Value>(&env::var("SEASON_ANI_CL")?);
 
     let base_url = env::var("BASE_API_URL")?;
 

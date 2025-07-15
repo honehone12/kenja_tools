@@ -22,11 +22,11 @@ async fn req_staff(
     mongo_client: MongoClient,
     http_client: HttpClient
 ) -> anyhow::Result<()> {
-    let db = mongo_client.database(&env::var("POOL_DB")?);
-    let src_cl = db.collection::<Value>(&env::var("ANI_CL")?);
-    let staff_cl = db.collection::<AnimeStaffs>(&env::var("STAFF_CL")?);
+    let db = mongo_client.database(&env::var("SEASON_DB")?);
+    let src_cl = db.collection::<Value>(&env::var("SEASON_ANI_CL")?);
+    let staff_cl = db.collection::<AnimeStaffs>(&env::var("SEASON_STAFF_CL")?);
     
-    let base_url = env::var("BASE_URL")?;
+    let base_url = env::var("BASE_API_URL")?;
 
     let interval = Duration::from_millis(args.interval_mil);
     let timeout = Duration::from_millis(args.timeout_mil);

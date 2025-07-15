@@ -21,11 +21,11 @@ async fn req_ani_chara(
     mongo_client: MongoClient, 
     http_client: HttpClient
 ) -> anyhow::Result<()> {
-    let db = mongo_client.database(&env::var("POOL_DB")?);
-    let source = db.collection::<Value>(&env::var("ANI_CL")?);
-    let collection = db.collection::<AnimeCharacters>(&env::var("ANI_CHARA_CL")?);
+    let db = mongo_client.database(&env::var("SEASON_DB")?);
+    let source = db.collection::<Value>(&env::var("SEASON_ANI_CL")?);
+    let collection = db.collection::<AnimeCharacters>(&env::var("SEASON_ANI_CHARA_CL")?);
 
-    let base_url = env::var("BASE_URL")?;
+    let base_url = env::var("BASE_API_URL")?;
 
     let interval = Duration::from_millis(args.interval_mil);
     let timeout = Duration::from_millis(args.timeout_mil);
