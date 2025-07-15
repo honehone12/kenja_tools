@@ -16,7 +16,7 @@ pub async fn request(
     let res = http_client.get(url).timeout(timeout).send().await?;
     let status = res.status();
     if status != StatusCode::OK {
-        bail!("{url} respnsed {status}");
+        bail!("{url} responsed {status}");
     }
 
     let text = res.text().await?;
