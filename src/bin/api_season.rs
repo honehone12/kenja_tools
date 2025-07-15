@@ -24,10 +24,10 @@ async fn req_quarter_list(
     mongo_client: MongoClient,
     http_client: HttpClient
 ) -> anyhow::Result<()> {
-    let db = mongo_client.database(&env::var("POOL_DB")?);
-    let collection = db.collection::<Value>(&env::var("ANI_CL")?);
+    let db = mongo_client.database(&env::var("SEASON_DB")?);
+    let collection = db.collection::<Value>(&env::var("SEASON_CL")?);
 
-    let base_url = env::var("BASE_URL")?;
+    let base_url = env::var("BASE_API_URL")?;
 
     let interval = Duration::from_millis(args.interval_mil);
     let timeout = Duration::from_millis(args.timeout_mil);

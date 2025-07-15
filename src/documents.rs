@@ -4,8 +4,9 @@ pub mod anime_raw;
 
 use std::fmt::{Display, Formatter, Result as FmtResult};
 use clap::ValueEnum;
-
 use crate::documents::anime_search::ItemType32;
+
+const HENTAI_RATING_STR: &'static str = "Rx - Hentai";
 
 #[derive(ValueEnum, Clone, Debug)]
 pub enum Rating {
@@ -32,10 +33,18 @@ impl Rating {
     }
 
     #[inline]
-    pub fn to_32(&self) -> anime_search::Rating32 {
+    pub const fn to_32(&self) -> anime_search::Rating32 {
         match self {
             Rating::AllAges => anime_search::Rating32::AllAges,
             Rating::Hentai => anime_search::Rating32::Hentai,
+        }
+    }
+
+    #[inline]
+    pub fn match_str(&self, rating_str: &str) -> bool {
+        match self {
+            Rating::AllAges => rating_str != HENTAI_RATING_STR,
+            Rating::Hentai => rating_str == HENTAI_RATING_STR
         }
     }
 }
@@ -57,7 +66,7 @@ impl Display for ItemType {
 
 impl ItemType {
     #[inline]
-    pub fn to_32(&self) -> anime_search::ItemType32 {
+    pub const fn to_32(&self) -> anime_search::ItemType32 {
         match self {
             ItemType::Anime => ItemType32::Anime,
             ItemType::Chara => ItemType32::Character

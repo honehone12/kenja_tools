@@ -42,8 +42,7 @@ async fn flatten(args: Args, mongo_client: MongoClient)
     let src_db = mongo_client.database(&env::var("POOL_DB")?);
     let dst_db = mongo_client.database(&env::var("SEARCH_DB")?);
 
-    let ani = args.rating.as_suffix(&env::var("ANI_CL")?);
-    let ani_cl = src_db.collection::<AnimeDocument>(&ani);
+    let ani_cl = src_db.collection::<AnimeDocument>(&env::var("ANI_CL")?);
     let ani_chara_cl = src_db.collection::<AniCharaBridge>(&env::var("ANI_CHARA_CL")?);
     let chara_cl = src_db.collection::<CharacterDocument>(&env::var("CHARA_CL")?);
     let staff_cl = src_db.collection::<StaffDocument>(&env::var("STAFF_CL")?);
@@ -89,6 +88,10 @@ async fn flatten(args: Args, mongo_client: MongoClient)
             Some(s) if is_expected_media_type(&s) => (), 
             _ => continue
         };
+
+        if !args.rating.match_str(&anime.rating) {
+            continue;
+        }
 
         let synopsis = match anime.synopsis {
             Some(s) if !s.is_empty() => s,

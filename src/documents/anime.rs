@@ -33,6 +33,7 @@ pub struct AnimeDocument {
     #[serde(rename = "type")]
     pub media_type: Option<String>,
     pub aired: AiredPeriod,
+    pub rating: String,
     pub title: String,
     pub title_english: Option<String>,
     pub title_japanese: Option<String>,
