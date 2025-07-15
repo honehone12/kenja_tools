@@ -1,4 +1,4 @@
-use std::{env, vec};
+use std::{env, time::{SystemTime, UNIX_EPOCH}, vec};
 use clap::Parser;
 use anyhow::bail;
 use chrono::NaiveDate;
@@ -29,9 +29,9 @@ use kenja_tools::{
 struct Args {
     #[arg(long, default_value_t = 1965)]
     oldest: i32,
-    #[arg(long, default_value_t = 5)]
+    #[arg(long, default_value_t = 4)]
     anime_likes: u64,
-    #[arg(long, default_value_t = 5)]
+    #[arg(long, default_value_t = 6)]
     chara_likes: u64,
     #[arg(long, value_enum)]
     rating: Rating
@@ -118,7 +118,10 @@ async fn flatten(args: Args, mongo_client: MongoClient)
         let studios = anime.studios.iter().map(|s| s.name.clone())
             .collect::<Vec<String>>();
 
+        let updated_at = SystemTime::now().duration_since(UNIX_EPOCH)?.as_millis() as u64;
+
         let res = flat_cl.insert_one(FlatDocument{
+            updated_at,
             item_type: ItemType32::Anime,
             rating: args.rating.to_32(),
             url: anime.url,
@@ -177,6 +180,7 @@ async fn flatten(args: Args, mongo_client: MongoClient)
                     .collect::<Vec<String>>().join(". ");
 
                 batch.push(FlatDocument{
+                    updated_at,
                     item_type: ItemType32::Character,
                     rating: args.rating.to_32(),
                     url: chara.url,

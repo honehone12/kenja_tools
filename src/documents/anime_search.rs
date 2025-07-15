@@ -30,6 +30,8 @@ pub struct Parent {
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct FlatDocument {
+    // mongodb's Date obj is unix mils
+    pub updated_at: u64,
     pub item_type: ItemType32,
     pub rating: Rating32,
     pub url: String,
