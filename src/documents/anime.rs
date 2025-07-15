@@ -63,7 +63,8 @@ pub struct Person {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Character {
-    pub mal_id: i64
+    pub mal_id: i64,
+    pub url: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]

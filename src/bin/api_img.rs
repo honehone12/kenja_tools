@@ -14,8 +14,6 @@ struct Args {
     iteration: u32,
     #[arg(long)]
     img_path: String,
-    #[arg(long)]
-    collection: String,
     #[arg(long, default_value_t = 1500)]
     interval_mil: u64,
     #[arg(long, default_value_t = 10000)]
@@ -28,8 +26,8 @@ async fn img(
     http_client: HttpClient
 ) -> anyhow::Result<()> {
     let db = mongo_client.database(&env::var("SEARCH_DB")?);
-    let colle = db.collection::<Img>(&args.collection);
-    info!("obtaining {} documents...", args.collection);
+    let colle = db.collection::<Img>(&env::var("FLAT_CL")?);
+    info!("obtaining documents...");
     let img_list = colle.find(doc! {}).await?.try_collect::<Vec<Img>>().await?;
     let list_total = img_list.len();
     
