@@ -89,8 +89,13 @@ async fn flatten(args: Args, mongo_client: MongoClient)
             _ => continue
         };
 
-        if !args.rating.match_str(&anime.rating) {
-            continue;
+        match anime.rating {
+            Some(s) => {
+                if !args.rating.match_str(&s) {
+                    continue;
+                }
+            }
+            None => continue
         }
 
         let synopsis = match anime.synopsis {
