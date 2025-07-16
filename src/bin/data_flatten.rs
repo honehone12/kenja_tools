@@ -46,7 +46,12 @@ async fn flatten(args: Args, mongo_client: MongoClient)
     let ani_chara_cl = src_db.collection::<AniCharaBridge>(&env::var("SEASON_ANI_CHARA_CL")?);
     let chara_cl = src_db.collection::<CharacterDocument>(&env::var("SEASON_CHARA_CL")?);
     let staff_cl = src_db.collection::<StaffDocument>(&env::var("SEASON_STAFF_CL")?);
-    let flat_cl = dst_db.collection::<FlatDocument>(&env::var("SEASON_FLAT_CL")?);
+    
+    let mut flat_cl = env::var("SEASON_FLAT_CL")?;
+    if matches!(args.rating, Rating::Hentai) {
+        flat_cl = args.rating.as_suffix(&flat_cl);
+    }
+    let flat_cl = dst_db.collection::<FlatDocument>(&flat_cl);
 
     let mut ani_list = ani_cl.find(doc! {}).await?
         .try_collect::<Vec<AnimeDocument>>().await?;
