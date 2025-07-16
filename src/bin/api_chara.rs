@@ -41,18 +41,17 @@ async fn req_chara(
         .filter_map(|bson| bson.as_str().map(|str| str.to_string()))
         .collect::<Vec<String>>();
     let mut ani_chara_stream = ani_chara_cl.find(doc! {}).await?;
-    let mut batch = vec![];
-
+    let mut total = 0;
+    
     while let Some(bridge) = ani_chara_stream.try_next().await? {
+        let mut batch = vec![];
+        
         for chara_cast in bridge.characters {
-            if flat_url_list.iter()
-                .find(|url| **url == chara_cast.character.url).is_some() 
-            {
+            if flat_url_list.contains(&chara_cast.character.url) {
                 continue;
             }
-            if chara_list.iter()
-                .find(|mal_id| **mal_id == chara_cast.character.mal_id).is_some()
-            {
+
+            if chara_list.contains(&chara_cast.character.mal_id) {
                 continue;
             }
 
@@ -67,10 +66,11 @@ async fn req_chara(
             time::sleep(interval).await;
         }
 
+        total += 1;
+
         if !batch.is_empty() {
             let res = chara_cl.insert_many(&batch).await?;
-            info!("inserted {} items", res.inserted_ids.len());
-            batch.clear();
+            info!("iteration {total}. inserted {} items", res.inserted_ids.len());
         }
     }
 

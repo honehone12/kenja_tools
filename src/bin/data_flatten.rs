@@ -39,14 +39,14 @@ struct Args {
 
 async fn flatten(args: Args, mongo_client: MongoClient) 
 -> anyhow::Result<()> {
-    let src_db = mongo_client.database(&env::var("POOL_DB")?);
-    let dst_db = mongo_client.database(&env::var("SEARCH_DB")?);
+    let src_db = mongo_client.database(&env::var("SEASON_DB")?);
+    let dst_db = mongo_client.database(&env::var("SEASON_SEARCH_DB")?);
 
-    let ani_cl = src_db.collection::<AnimeDocument>(&env::var("ANI_CL")?);
-    let ani_chara_cl = src_db.collection::<AniCharaBridge>(&env::var("ANI_CHARA_CL")?);
-    let chara_cl = src_db.collection::<CharacterDocument>(&env::var("CHARA_CL")?);
-    let staff_cl = src_db.collection::<StaffDocument>(&env::var("STAFF_CL")?);
-    let flat_cl = dst_db.collection::<FlatDocument>(&env::var("FLAT_CL")?);
+    let ani_cl = src_db.collection::<AnimeDocument>(&env::var("SEASON_ANI_CL")?);
+    let ani_chara_cl = src_db.collection::<AniCharaBridge>(&env::var("SEASON_ANI_CHARA_CL")?);
+    let chara_cl = src_db.collection::<CharacterDocument>(&env::var("SEASON_CHARA_CL")?);
+    let staff_cl = src_db.collection::<StaffDocument>(&env::var("SEASON_STAFF_CL")?);
+    let flat_cl = dst_db.collection::<FlatDocument>(&env::var("SEASON_FLAT_CL")?);
 
     let mut ani_list = ani_cl.find(doc! {}).await?
         .try_collect::<Vec<AnimeDocument>>().await?;
@@ -72,8 +72,13 @@ async fn flatten(args: Args, mongo_client: MongoClient)
 
     info!("start flattening");
     let mut batch = vec![];
+    let mut inserted_anime_list = vec![];
     let mut inserted_chara_list = vec![];
     for anime in ani_list {
+        if inserted_anime_list.contains(&anime.mal_id) {
+            continue;
+        }
+
         match anime.aired.from {
             Some(s) => {
                 let date = NaiveDate::parse_from_str(&s, &chrono_fmt)?;
@@ -143,6 +148,7 @@ async fn flatten(args: Args, mongo_client: MongoClient)
             staff: flat_staff,
             description: synopsis,
         }).await?;
+        inserted_anime_list.push(anime.mal_id);
 
         let Some(parent_id) = res.inserted_id.as_object_id() else {
             bail!("inserted object id is empty")
@@ -162,6 +168,7 @@ async fn flatten(args: Args, mongo_client: MongoClient)
                 };
 
                 let chara = chara_list.remove(idx);
+
                 if inserted_chara_list.contains(&chara.mal_id) {
                     continue;
                 }

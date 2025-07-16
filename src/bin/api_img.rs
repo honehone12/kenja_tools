@@ -10,10 +10,8 @@ use tracing::{info, warn};
 #[derive(Parser)]
 #[command(version)]
 struct Args {
-    #[arg(long, default_value_t = 100)]
+    #[arg(long, default_value_t = 100000)]
     iteration: u32,
-    #[arg(long)]
-    img_path: String,
     #[arg(long, default_value_t = 1500)]
     interval_mil: u64,
     #[arg(long, default_value_t = 10000)]
@@ -25,8 +23,8 @@ async fn img(
     mongo_client: MongoClient,
     http_client: HttpClient
 ) -> anyhow::Result<()> {
-    let db = mongo_client.database(&env::var("SEARCH_DB")?);
-    let colle = db.collection::<Img>(&env::var("FLAT_CL")?);
+    let db = mongo_client.database(&env::var("SEASON_SEARCH_DB")?);
+    let colle = db.collection::<Img>(&env::var("SEASON_FLAT_CL")?);
     info!("obtaining documents...");
     let img_list = colle.find(doc! {}).await?.try_collect::<Vec<Img>>().await?;
     let list_total = img_list.len();
@@ -34,10 +32,7 @@ async fn img(
     let interval = Duration::from_millis(args.interval_mil);
     let timeout = Duration::from_millis(args.timeout_mil);
 
-    let img_root = match args.img_path.strip_suffix('/') {
-        Some(r) => r,
-        None => &args.img_path 
-    };    
+    let img_root = env::var("IMG_ROOT")?;
 
     let mut it = 0u32;
     let mut total = 0u32;
