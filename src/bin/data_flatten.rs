@@ -48,6 +48,7 @@ struct Args {
 async fn create_new_img(
     img_root: &str, 
     new_img_root: &str,
+    unique_url: &str,
     img_url: &str,
 ) -> anyhow::Result<Option<String>> {
     
@@ -61,7 +62,7 @@ async fn create_new_img(
         return Ok(None);
     }
     
-    let hash = blake3::hash(img_url.as_bytes());
+    let hash = blake3::hash(unique_url.as_bytes());
     let hash = hash.as_bytes();
     let hex = hex::encode(&hash[..16]);
 
@@ -69,7 +70,7 @@ async fn create_new_img(
     let new_path = PathBuf::from_str(new_img_root)?.join(&new_file);
 
     if fs::try_exists(&new_path).await? {
-        error!("file {new_path:?} already exists. is it hash collision?");
+        error!("file {new_path:?} already exists: {unique_url}: is it hash collision?");
         return Ok(None);
     }
     
@@ -83,15 +84,15 @@ async fn flatten(args: Args, mongo_client: MongoClient)
     let img_root = env::var("IMG_ROOT")?;
     let new_img_root = env::var("NEW_IMG_ROOT")?;
 
-    let src_db = mongo_client.database(&env::var("SEASON_DB")?);
-    let dst_db = mongo_client.database(&env::var("SEASON_SEARCH_DB")?);
+    let src_db = mongo_client.database(&env::var("MERGE_DB")?);
+    let dst_db = mongo_client.database(&env::var("SEARCH_DB")?);
 
-    let ani_cl = src_db.collection::<AnimeDocument>(&env::var("SEASON_ANI_CL")?);
-    let ani_chara_cl = src_db.collection::<AniCharaBridge>(&env::var("SEASON_ANI_CHARA_CL")?);
-    let chara_cl = src_db.collection::<CharacterDocument>(&env::var("SEASON_CHARA_CL")?);
-    let staff_cl = src_db.collection::<StaffDocument>(&env::var("SEASON_STAFF_CL")?);
+    let ani_cl = src_db.collection::<AnimeDocument>(&env::var("MERGE_ANI_CL")?);
+    let ani_chara_cl = src_db.collection::<AniCharaBridge>(&env::var("MERGE_ANI_CHARA_CL")?);
+    let chara_cl = src_db.collection::<CharacterDocument>(&env::var("MERGE_CHARA_CL")?);
+    let staff_cl = src_db.collection::<StaffDocument>(&env::var("MERGE_STAFF_CL")?);
     
-    let mut flat_cl = env::var("SEASON_FLAT_CL")?;
+    let mut flat_cl = env::var("FLAT_CL")?;
     if matches!(args.rating, Rating::Hentai) {
         flat_cl = args.rating.as_suffix(&flat_cl);
     }
@@ -184,7 +185,8 @@ async fn flatten(args: Args, mongo_client: MongoClient)
 
         let Some(img) = create_new_img(
             &img_root, 
-            &new_img_root, 
+            &new_img_root,
+            &anime.url, 
             &img
         ).await? else {
             continue;
@@ -253,7 +255,8 @@ async fn flatten(args: Args, mongo_client: MongoClient)
 
                 let Some(img) = create_new_img(
                     &img_root, 
-                    &new_img_root, 
+                    &new_img_root,
+                    &chara.url, 
                     &img
                 ).await? else {
                     continue;
