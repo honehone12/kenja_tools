@@ -1,10 +1,18 @@
-use std::{env, time::{SystemTime, UNIX_EPOCH}, vec};
+use std::{
+    env, 
+    path::PathBuf, 
+    str::FromStr, 
+    time::{SystemTime, UNIX_EPOCH}, 
+    vec
+};
+use tokio::fs;
 use clap::Parser;
 use anyhow::bail;
+use url::Url;
 use chrono::NaiveDate;
 use futures::TryStreamExt;
 use mongodb::{bson::doc, Client as MongoClient};
-use tracing::info;
+use tracing::{info, warn, error};
 use kenja_tools::{
     documents::{
         anime::{
@@ -37,8 +45,44 @@ struct Args {
     rating: Rating
 }
 
+async fn create_new_img(
+    img_root: &str, 
+    new_img_root: &str,
+    img_url: &str,
+) -> anyhow::Result<Option<String>> {
+    
+    let u = Url::parse(img_url)?;
+    let mut p = u.path().to_string();
+    p.remove(0);
+    let path = PathBuf::from_str(img_root)?.join(p);
+
+    if !fs::try_exists(&path).await? {
+        warn!("file {path:?} does not exits");
+        return Ok(None);
+    }
+    
+    let hash = blake3::hash(img_url.as_bytes());
+    let hash = hash.as_bytes();
+    let hex = hex::encode(&hash[..16]);
+
+    let new_file = format!("{hex}.jpg");
+    let new_path = PathBuf::from_str(new_img_root)?.join(&new_file);
+
+    if fs::try_exists(&new_path).await? {
+        error!("file {new_path:?} already exists. is it hash collision?");
+        return Ok(None);
+    }
+    
+    fs::copy(path, new_path).await?;
+
+    Ok(Some(new_file))
+}
+
 async fn flatten(args: Args, mongo_client: MongoClient) 
 -> anyhow::Result<()> {
+    let img_root = env::var("IMG_ROOT")?;
+    let new_img_root = env::var("NEW_IMG_ROOT")?;
+
     let src_db = mongo_client.database(&env::var("SEASON_DB")?);
     let dst_db = mongo_client.database(&env::var("SEASON_SEARCH_DB")?);
 
@@ -138,6 +182,14 @@ async fn flatten(args: Args, mongo_client: MongoClient)
 
         let updated_at = SystemTime::now().duration_since(UNIX_EPOCH)?.as_millis() as u64;
 
+        let Some(img) = create_new_img(
+            &img_root, 
+            &new_img_root, 
+            &img
+        ).await? else {
+            continue;
+        };
+
         let res = flat_cl.insert_one(FlatDocument{
             updated_at,
             item_type: ItemType32::Anime,
@@ -198,6 +250,14 @@ async fn flatten(args: Args, mongo_client: MongoClient)
                 let flat_voice_actor = cc.voice_actors.iter()
                     .map(|v| v.person.name.replace(',', "").replace('.', ""))
                     .collect::<Vec<String>>().join(". ");
+
+                let Some(img) = create_new_img(
+                    &img_root, 
+                    &new_img_root, 
+                    &img
+                ).await? else {
+                    continue;
+                };
 
                 batch.push(FlatDocument{
                     updated_at,
