@@ -23,8 +23,8 @@ async fn img(
     mongo_client: MongoClient,
     http_client: HttpClient
 ) -> anyhow::Result<()> {
-    let db = mongo_client.database(&env::var("SEASON_SEARCH_DB")?);
-    let colle = db.collection::<Img>(&env::var("SEASON_FLAT_CL")?);
+    let db = mongo_client.database(&env::var("SEARCH_DB")?);
+    let colle = db.collection::<Img>(&env::var("FLAT_CL")?);
     info!("obtaining documents...");
     let img_list = colle.find(doc! {}).await?.try_collect::<Vec<Img>>().await?;
     let list_total = img_list.len();
@@ -32,7 +32,7 @@ async fn img(
     let interval = Duration::from_millis(args.interval_mil);
     let timeout = Duration::from_millis(args.timeout_mil);
 
-    let img_root = env::var("IMG_ROOT")?;
+    let img_root = env::var("RAW_IMG_ROOT")?;
 
     let mut it = 0u32;
     let mut total = 0u32;
