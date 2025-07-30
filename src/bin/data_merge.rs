@@ -9,7 +9,7 @@ async fn main() -> anyhow::Result<()> {
 
     let source_db = env::var("MERGE_SOURCE_DB")?;
     let source_cl = env::var("MERGE_SOURCE_CL")?;
-    let target_db = env::var("MERGE_TARGET_CL")?;
+    let target_db = env::var("MERGE_TARGET_DB")?;
     let target_cl = env::var("MERGE_TARGET_CL")?;
 
     let mongo_uri = env::var("MONGO_URI")?;
@@ -22,7 +22,8 @@ async fn main() -> anyhow::Result<()> {
         doc! {"$merge": doc! {
             "into": doc! {"db": target_db, "coll": target_cl},
             "on": "mal_id",
-            "whenMatched": "replace"
+            "whenMatched": "replace",
+            "whenNotMatched": "insert"
         }}
     ]).await?;
 
