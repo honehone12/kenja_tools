@@ -124,13 +124,8 @@ async fn flatten(args: Args, mongo_client: MongoClient)
 
     info!("start flattening");
     let mut batch = vec![];
-    let mut inserted_anime_list = vec![];
     let mut inserted_chara_list = vec![];
     for anime in ani_list {
-        if inserted_anime_list.contains(&anime.mal_id) {
-            continue;
-        }
-
         match anime.aired.from {
             Some(s) => {
                 let date = NaiveDate::parse_from_str(&s, &chrono_fmt)?;
@@ -214,7 +209,6 @@ async fn flatten(args: Args, mongo_client: MongoClient)
             staff: flat_staff,
             description: synopsis,
         }).await?;
-        inserted_anime_list.push(anime.mal_id);
 
         let Some(parent_id) = res.inserted_id.as_object_id() else {
             bail!("inserted object id is empty")

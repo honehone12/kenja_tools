@@ -22,8 +22,7 @@ async fn main() -> anyhow::Result<()> {
         doc! {"$merge": doc! {
             "into": doc! {"db": target_db, "coll": target_cl},
             "on": "mal_id",
-            "whenMatched": "replace",
-            "whenNotMatched": "insert"
+            "whenMatched": "replace"
         }}
     ]).await?;
 
