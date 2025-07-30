@@ -71,7 +71,7 @@ async fn create_new_img(
 
     let new_file = format!("{hex}.jpg");
     let new_path = PathBuf::from_str(merged_img_root)?.join(&new_file);
-    if fs::try_exists(&new_path).await? {
+    if fs::try_exists(new_path).await? {
         return Ok(Some(new_file))
     }
     
@@ -156,6 +156,24 @@ async fn flatten(args: Args, mongo_client: MongoClient)
             _ => continue
         };
 
+        if anime.favorites < args.anime_likes {
+            continue;
+        }
+
+        let Some(idx) = staff_list.iter().position(|s| s.mal_id == anime.mal_id) else {
+            continue;
+        };
+        let staff = staff_list.remove(idx);
+        if staff.staffs.is_empty() {
+            continue;
+        }
+        let flat_staff = staff.staffs.iter()
+            .map(|s| s.person.name.replace(',', "").replace('.', ""))
+            .collect::<Vec<String>>().join(". ");
+
+        let studios = anime.studios.iter().map(|s| s.name.clone())
+            .collect::<Vec<String>>();
+
         let img = match anime.images {
             Some(Images{jpg: Some(ImageUrls{image_url: Some(s)})}) => {
                 if args.hash_img {
@@ -175,24 +193,6 @@ async fn flatten(args: Args, mongo_client: MongoClient)
             }
             _ => continue
         };
-
-        if anime.favorites < args.anime_likes {
-            continue;
-        }
-
-        let Some(idx) = staff_list.iter().position(|s| s.mal_id == anime.mal_id) else {
-            continue;
-        };
-        let staff = staff_list.remove(idx);
-        if staff.staffs.is_empty() {
-            continue;
-        }
-        let flat_staff = staff.staffs.iter()
-            .map(|s| s.person.name.replace(',', "").replace('.', ""))
-            .collect::<Vec<String>>().join(". ");
-
-        let studios = anime.studios.iter().map(|s| s.name.clone())
-            .collect::<Vec<String>>();
 
         let updated_at = SystemTime::now().duration_since(UNIX_EPOCH)?.as_millis() as u64;
 
@@ -240,6 +240,17 @@ async fn flatten(args: Args, mongo_client: MongoClient)
                     _ => continue
                 };
 
+                if chara.favorites < args.chara_likes {
+                    continue;
+                }
+
+                if cc.voice_actors.is_empty() {
+                    continue;
+                }
+                let flat_voice_actor = cc.voice_actors.iter()
+                    .map(|v| v.person.name.replace(',', "").replace('.', ""))
+                    .collect::<Vec<String>>().join(". ");
+
                 let img = match chara.images {
                     Some(Images{jpg: Some(ImageUrls{image_url: Some(s)})}) => {
                         if args.hash_img {
@@ -259,17 +270,6 @@ async fn flatten(args: Args, mongo_client: MongoClient)
                     }
                     _ => continue
                 };
-
-                if chara.favorites < args.chara_likes {
-                    continue;
-                }
-
-                if cc.voice_actors.is_empty() {
-                    continue;
-                }
-                let flat_voice_actor = cc.voice_actors.iter()
-                    .map(|v| v.person.name.replace(',', "").replace('.', ""))
-                    .collect::<Vec<String>>().join(". ");
 
                 batch.push(FlatDocument{
                     updated_at,
