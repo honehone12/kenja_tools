@@ -42,7 +42,9 @@ struct Args {
     #[arg(long, default_value_t = 6)]
     chara_likes: u64,
     #[arg(long, value_enum)]
-    rating: Rating
+    rating: Rating,
+    #[arg(long)]
+    hash_img: bool
 }
 
 async fn create_new_img(
@@ -159,7 +161,21 @@ async fn flatten(args: Args, mongo_client: MongoClient)
         };
 
         let img = match anime.images {
-            Some(Images{jpg: Some(ImageUrls{image_url: Some(s)})}) => s,
+            Some(Images{jpg: Some(ImageUrls{image_url: Some(s)})}) => {
+                if args.hash_img {
+                    let Some(img) = create_new_img(
+                        &img_root, 
+                        &new_img_root,
+                        &anime.url, 
+                        &s
+                    ).await? else {
+                        continue;
+                    };
+                    img
+                } else {
+                    s
+                }
+            }
             _ => continue
         };
 
@@ -182,15 +198,6 @@ async fn flatten(args: Args, mongo_client: MongoClient)
             .collect::<Vec<String>>();
 
         let updated_at = SystemTime::now().duration_since(UNIX_EPOCH)?.as_millis() as u64;
-
-        let Some(img) = create_new_img(
-            &img_root, 
-            &new_img_root,
-            &anime.url, 
-            &img
-        ).await? else {
-            continue;
-        };
 
         let res = flat_cl.insert_one(FlatDocument{
             updated_at,
@@ -238,7 +245,21 @@ async fn flatten(args: Args, mongo_client: MongoClient)
                 };
 
                 let img = match chara.images {
-                    Some(Images{jpg: Some(ImageUrls{image_url: Some(s)})}) => s,
+                    Some(Images{jpg: Some(ImageUrls{image_url: Some(s)})}) => {
+                        if args.hash_img {
+                            let Some(img) = create_new_img(
+                                &img_root, 
+                                &new_img_root,
+                                &chara.url, 
+                                &s
+                            ).await? else {
+                                continue;
+                            };
+                            img
+                        } else {
+                            s
+                        }
+                    }
                     _ => continue
                 };
 
