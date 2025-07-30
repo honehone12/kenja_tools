@@ -12,7 +12,7 @@ use url::Url;
 use chrono::NaiveDate;
 use futures::TryStreamExt;
 use mongodb::{bson::doc, Client as MongoClient};
-use tracing::{info, warn, error};
+use tracing::{info, warn};
 use kenja_tools::{
     documents::{
         anime::{
