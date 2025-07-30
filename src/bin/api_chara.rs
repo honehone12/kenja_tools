@@ -22,9 +22,6 @@ async fn req_chara(
     mongo_client: MongoClient,
     http_client: HttpClient
 ) -> anyhow::Result<()> {
-    let search_db = mongo_client.database(&env::var("SEARCH_DB")?);
-    let flat_cl = search_db.collection::<Value>(&env::var("FLAT_CL")?);
-
     let db = mongo_client.database(&env::var("SEASON_DB")?);
     let ani_chara_cl = db.collection::<AniCharaBridge>(&env::var("SEASON_ANI_CHARA_CL")?);
     let chara_cl = db.collection::<Value>(&env::var("SEASON_CHARA_CL")?);
@@ -37,9 +34,7 @@ async fn req_chara(
     let chara_list = chara_cl.distinct("mal_id", doc! {}).await?.iter()
         .filter_map(|bson| bson.as_i64())
         .collect::<Vec<i64>>();
-    let flat_url_list = flat_cl.distinct("url", doc! {}).await?.iter()
-        .filter_map(|bson| bson.as_str().map(|str| str.to_string()))
-        .collect::<Vec<String>>();
+
     let mut ani_chara_stream = ani_chara_cl.find(doc! {}).await?;
     let mut total = 0;
     
@@ -47,10 +42,6 @@ async fn req_chara(
         let mut batch = vec![];
         
         for chara_cast in bridge.characters {
-            if flat_url_list.contains(&chara_cast.character.url) {
-                continue;
-            }
-
             if chara_list.contains(&chara_cast.character.mal_id) {
                 continue;
             }
