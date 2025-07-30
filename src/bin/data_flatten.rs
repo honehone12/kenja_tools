@@ -48,7 +48,8 @@ struct Args {
 }
 
 async fn create_new_img(
-    img_root: &str, 
+    raw_img_root: &str,
+    merged_img_root: &str, 
     new_img_root: &str,
     unique_url: &str,
     img_url: &str,
@@ -57,7 +58,7 @@ async fn create_new_img(
     let u = Url::parse(img_url)?;
     let mut p = u.path().to_string();
     p.remove(0);
-    let path = PathBuf::from_str(img_root)?.join(p);
+    let path = PathBuf::from_str(raw_img_root)?.join(p);
 
     if !fs::try_exists(&path).await? {
         warn!("file {path:?} does not exits");
@@ -69,13 +70,12 @@ async fn create_new_img(
     let hex = hex::encode(&hash[..16]);
 
     let new_file = format!("{hex}.jpg");
-    let new_path = PathBuf::from_str(new_img_root)?.join(&new_file);
-
+    let new_path = PathBuf::from_str(merged_img_root)?.join(&new_file);
     if fs::try_exists(&new_path).await? {
-        error!("file {new_path:?} already exists: {unique_url}: is it hash collision?");
-        return Ok(None);
+        return Ok(Some(new_file))
     }
     
+    let new_path = PathBuf::from_str(new_img_root)?.join(&new_file);
     fs::copy(path, new_path).await?;
 
     Ok(Some(new_file))
@@ -83,16 +83,17 @@ async fn create_new_img(
 
 async fn flatten(args: Args, mongo_client: MongoClient) 
 -> anyhow::Result<()> {
-    let img_root = env::var("IMG_ROOT")?;
+    let raw_img_root = env::var("RAW_IMG_ROOT")?;
+    let merged_img_root = env::var("MERGED_IMG_ROOT")?;
     let new_img_root = env::var("NEW_IMG_ROOT")?;
 
-    let src_db = mongo_client.database(&env::var("MERGE_DB")?);
+    let src_db = mongo_client.database(&env::var("MERGED_DB")?);
     let dst_db = mongo_client.database(&env::var("SEARCH_DB")?);
 
-    let ani_cl = src_db.collection::<AnimeDocument>(&env::var("MERGE_ANI_CL")?);
-    let ani_chara_cl = src_db.collection::<AniCharaBridge>(&env::var("MERGE_ANI_CHARA_CL")?);
-    let chara_cl = src_db.collection::<CharacterDocument>(&env::var("MERGE_CHARA_CL")?);
-    let staff_cl = src_db.collection::<StaffDocument>(&env::var("MERGE_STAFF_CL")?);
+    let ani_cl = src_db.collection::<AnimeDocument>(&env::var("MERGED_ANI_CL")?);
+    let ani_chara_cl = src_db.collection::<AniCharaBridge>(&env::var("MERGED_ANI_CHARA_CL")?);
+    let chara_cl = src_db.collection::<CharacterDocument>(&env::var("MERGED_CHARA_CL")?);
+    let staff_cl = src_db.collection::<StaffDocument>(&env::var("MERGED_STAFF_CL")?);
     
     let mut flat_cl = env::var("FLAT_CL")?;
     if matches!(args.rating, Rating::Hentai) {
@@ -159,7 +160,8 @@ async fn flatten(args: Args, mongo_client: MongoClient)
             Some(Images{jpg: Some(ImageUrls{image_url: Some(s)})}) => {
                 if args.hash_img {
                     let Some(img) = create_new_img(
-                        &img_root, 
+                        &raw_img_root,
+                        &merged_img_root, 
                         &new_img_root,
                         &anime.url, 
                         &s
@@ -242,7 +244,8 @@ async fn flatten(args: Args, mongo_client: MongoClient)
                     Some(Images{jpg: Some(ImageUrls{image_url: Some(s)})}) => {
                         if args.hash_img {
                             let Some(img) = create_new_img(
-                                &img_root, 
+                                &raw_img_root,
+                                &merged_img_root, 
                                 &new_img_root,
                                 &chara.url, 
                                 &s
@@ -269,7 +272,8 @@ async fn flatten(args: Args, mongo_client: MongoClient)
                     .collect::<Vec<String>>().join(". ");
 
                 let Some(img) = create_new_img(
-                    &img_root, 
+                    &raw_img_root,
+                    &merged_img_root, 
                     &new_img_root,
                     &chara.url, 
                     &img
