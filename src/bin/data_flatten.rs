@@ -271,16 +271,6 @@ async fn flatten(args: Args, mongo_client: MongoClient)
                     .map(|v| v.person.name.replace(',', "").replace('.', ""))
                     .collect::<Vec<String>>().join(". ");
 
-                let Some(img) = create_new_img(
-                    &raw_img_root,
-                    &merged_img_root, 
-                    &new_img_root,
-                    &chara.url, 
-                    &img
-                ).await? else {
-                    continue;
-                };
-
                 batch.push(FlatDocument{
                     updated_at,
                     item_type: ItemType32::Character,
