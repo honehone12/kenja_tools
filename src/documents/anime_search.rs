@@ -8,7 +8,9 @@ use serde_with::skip_serializing_none;
 pub enum ItemType32 {
     Unspecified = 0,
     Anime = 1,
-    Character = 2
+    Character = 2,
+    AnimeImgOnly = 3,
+    CharacterImgOnly = 4
 }
 
 #[derive(Serialize_repr, Deserialize_repr, PartialEq, Eq, Clone, Copy, Debug)]
@@ -44,8 +46,8 @@ pub struct FlatDocument {
     pub aliases: Vec<String>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub studios: Vec<String>,
-    pub staff: String,
-    pub description: String
+    pub staff: Option<String>,
+    pub description: Option<String>
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
