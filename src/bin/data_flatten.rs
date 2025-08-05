@@ -118,6 +118,7 @@ async fn flatten(args: Args, mongo_client: MongoClient)
         .try_collect::<Vec<StaffDocument>>().await?;
     info!("{} staff documets", staff_list.len());
 
+    let allow_empty_text = matches!(args.rating, Rating::Hentai);
     let chrono_fmt = "%Y-%m-%dT%H:%M:%S%z";
     let Some(oldest) = NaiveDate::from_yo_opt(args.oldest, 1) else {
         bail!("could not find a day on the calendar");
@@ -151,25 +152,51 @@ async fn flatten(args: Args, mongo_client: MongoClient)
             None => continue
         }
 
-        let synopsis = match anime.synopsis {
-            Some(s) if !s.is_empty() => s,
-            _ => continue
-        };
-
         if anime.favorites < args.anime_likes {
             continue;
         }
 
-        let Some(idx) = staff_list.iter().position(|s| s.mal_id == anime.mal_id) else {
-            continue;
+        let synopsis = match anime.synopsis {
+            Some(s) if !s.is_empty() => Some(s),
+            _ => {
+                if allow_empty_text {
+                    None
+                } else {
+                    continue;
+                }
+            }
         };
-        let staff = staff_list.remove(idx);
-        if staff.staffs.is_empty() {
-            continue;
-        }
-        let flat_staff = staff.staffs.iter()
-            .map(|s| s.person.name.replace(',', "").replace('.', ""))
-            .collect::<Vec<String>>().join(". ");
+
+        let staffs = match staff_list.iter().position(|s| s.mal_id == anime.mal_id) {
+            Some(idx) => {
+                let staffs = staff_list.remove(idx).staffs;
+                if staffs.is_empty() {
+                    None
+                } else {
+                    Some(staffs)
+                }
+            },
+            None => {
+                if allow_empty_text {
+                    None
+                } else {
+                    continue;
+                }
+            }
+        };
+
+        let flat_staff = match staffs {
+            Some(stfs) => Some(stfs.iter()
+                .map(|s| s.person.name.replace(',', "").replace('.', ""))
+                .collect::<Vec<String>>().join(". ")),
+            None => {
+                if allow_empty_text {
+                    None
+                } else {
+                    continue;
+                }
+            }
+        };
 
         let studios = anime.studios.iter().map(|s| s.name.clone())
             .collect::<Vec<String>>();
@@ -222,7 +249,7 @@ async fn flatten(args: Args, mongo_client: MongoClient)
             .position(|b| b.mal_id == anime.mal_id)
         {
             let bridge = ani_chara_list.remove(idx);
-            for cc in bridge.characters.iter() {
+            for cc in bridge.characters {
                 let Some(idx) = chara_list.iter_mut()
                     .position(|c| c.mal_id == cc.character.mal_id)
                 else {
@@ -235,21 +262,45 @@ async fn flatten(args: Args, mongo_client: MongoClient)
                     continue;
                 }
                 
-                let about = match chara.about {
-                    Some(s) if !s.is_empty() => s,
-                    _ => continue
-                };
-
                 if chara.favorites < args.chara_likes {
                     continue;
                 }
 
-                if cc.voice_actors.is_empty() {
-                    continue;
-                }
-                let flat_voice_actor = cc.voice_actors.iter()
-                    .map(|v| v.person.name.replace(',', "").replace('.', ""))
-                    .collect::<Vec<String>>().join(". ");
+                let about = match chara.about {
+                    Some(s) if !s.is_empty() => Some(s),
+                    _ => {
+                        if allow_empty_text {
+                            None
+                        } else {
+                            continue;
+                        }
+                    }
+                };
+
+                let voice_actors = if cc.voice_actors.is_empty() {
+                    if allow_empty_text {
+                        None
+                    } else {
+                        continue;
+                    }
+                } else {
+                    Some(cc.voice_actors)
+                };
+
+                let flat_voice_actor = match voice_actors {
+                    Some(vos) => {
+                        Some(vos.iter()
+                            .map(|v| v.person.name.replace(',', "").replace('.', ""))
+                            .collect::<Vec<String>>().join(". "))
+                    }
+                    None => {
+                        if allow_empty_text {
+                            None
+                        } else {
+                            continue;
+                        }
+                    }
+                };
 
                 let img = match chara.images {
                     Some(Images{jpg: Some(ImageUrls{image_url: Some(s)})}) => {
