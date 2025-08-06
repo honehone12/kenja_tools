@@ -7,10 +7,10 @@ async fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt().init();
     dotenvy::dotenv()?;
 
-    let source_db = env::var("MERGE_SOURCE_DB")?;
-    let source_cl = env::var("MERGE_SOURCE_CL")?;
-    let target_db = env::var("MERGE_TARGET_DB")?;
-    let target_cl = env::var("MERGE_TARGET_CL")?;
+    let source_db = env::var("MRG_SRC_DB")?;
+    let source_cl = env::var("MRG_SRC_CL")?;
+    let target_db = env::var("MRG_DST_DB")?;
+    let target_cl = env::var("MRG_DST_CL")?;
 
     let mongo_uri = env::var("MONGO_URI")?;
     let mongo_client = MongoClient::with_uri_str(mongo_uri).await?;    

@@ -87,19 +87,17 @@ async fn flatten(args: Args, mongo_client: MongoClient)
     let merged_img_root = env::var("MERGED_IMG_ROOT")?;
     let new_img_root = env::var("NEW_IMG_ROOT")?;
 
-    let src_db = mongo_client.database(&env::var("MERGED_DB")?);
-    let dst_db = mongo_client.database(&env::var("SEARCH_DB")?);
+    let src_db = mongo_client.database(&env::var("FLT_SRC_DB")?);
+    let dst_db = mongo_client.database(&env::var("FLT_DST_DB")?);
+    let exist_db = mongo_client.database(&env::var("FLT_EXIST_DB")?);
 
-    let ani_cl = src_db.collection::<AnimeDocument>(&env::var("MERGED_ANI_CL")?);
-    let ani_chara_cl = src_db.collection::<AniCharaBridge>(&env::var("MERGED_ANI_CHARA_CL")?);
-    let chara_cl = src_db.collection::<CharacterDocument>(&env::var("MERGED_CHARA_CL")?);
-    let staff_cl = src_db.collection::<StaffDocument>(&env::var("MERGED_STAFF_CL")?);
+    let ani_cl = src_db.collection::<AnimeDocument>(&env::var("FLT_SRC_ANI_CL")?);
+    let ani_chara_cl = src_db.collection::<AniCharaBridge>(&env::var("FLT_SRC_ANI_CHARA_CL")?);
+    let chara_cl = src_db.collection::<CharacterDocument>(&env::var("FLT_SRC_CHARA_CL")?);
+    let staff_cl = src_db.collection::<StaffDocument>(&env::var("FLT_SRC_STAFF_CL")?);
     
-    let mut flat_cl = env::var("FLAT_CL")?;
-    if matches!(args.rating, Rating::Hentai) {
-        flat_cl = args.rating.as_suffix(&flat_cl);
-    }
-    let flat_cl = dst_db.collection::<FlatDocument>(&flat_cl);
+    let exist_cl = exist_db.collection::<FlatDocument>(&env::var("FLT_EXIST_CL")?);
+    let flat_cl = dst_db.collection::<FlatDocument>(&env::var("FLT_DST_CL")?);
 
     let mut ani_list = ani_cl.find(doc! {}).await?
         .try_collect::<Vec<AnimeDocument>>().await?;
@@ -117,6 +115,10 @@ async fn flatten(args: Args, mongo_client: MongoClient)
     let mut staff_list = staff_cl.find(doc! {}).await?
         .try_collect::<Vec<StaffDocument>>().await?;
     info!("{} staff documets", staff_list.len());
+
+    let exist_list = exist_cl.find(doc! {}).await?
+        .try_collect::<Vec<FlatDocument>>().await?;
+    info!("{} exist documents", exist_list.len());
 
     let allow_empty_text = matches!(args.rating, Rating::Hentai);
     let chrono_fmt = "%Y-%m-%dT%H:%M:%S%z";
@@ -155,6 +157,12 @@ async fn flatten(args: Args, mongo_client: MongoClient)
         if anime.favorites < args.anime_likes {
             continue;
         }
+
+        let url = if exist_list.iter().find(|f| f.url == anime.url).is_none() {
+            anime.url.clone()
+        } else {
+            continue;
+        };
 
         let synopsis = match anime.synopsis {
             Some(s) if !s.is_empty() => Some(s),
@@ -198,9 +206,6 @@ async fn flatten(args: Args, mongo_client: MongoClient)
             }
         };
 
-        let studios = anime.studios.iter().map(|s| s.name.clone())
-            .collect::<Vec<String>>();
-
         let img = match anime.images {
             Some(Images{jpg: Some(ImageUrls{image_url: Some(s)})}) => {
                 if args.hash_img {
@@ -221,6 +226,19 @@ async fn flatten(args: Args, mongo_client: MongoClient)
             _ => continue
         };
 
+        let studios = if anime.studios.is_empty() {
+            None
+        } else {
+            Some(anime.studios.iter().map(|s| s.name.clone())
+                .collect::<Vec<String>>())
+        }; 
+
+        let aliases = if anime.title_synonyms.is_empty() {
+            None
+        } else {
+            Some(anime.title_synonyms)
+        };
+
         let item_type = match synopsis {
             Some(_) => ItemType32::Anime,
             None => ItemType32::AnimeImgOnly
@@ -232,13 +250,13 @@ async fn flatten(args: Args, mongo_client: MongoClient)
             updated_at,
             item_type,
             rating: args.rating.to_32(),
-            url: anime.url,
+            url,
             img,
             parent: None,
             name: anime.title.clone(),
             name_english: anime.title_english,
             name_japanese: anime.title_japanese.clone(),
-            aliases: anime.title_synonyms,
+            aliases,
             studios,
             staff: flat_staff,
             description: synopsis,
@@ -270,6 +288,12 @@ async fn flatten(args: Args, mongo_client: MongoClient)
                 if chara.favorites < args.chara_likes {
                     continue;
                 }
+
+                let url = if exist_list.iter().find(|f| f.url == chara.url).is_none() {
+                    chara.url.clone()
+                } else {
+                    continue;
+                };
 
                 let about = match chara.about {
                     Some(s) if !s.is_empty() => Some(s),
@@ -327,6 +351,12 @@ async fn flatten(args: Args, mongo_client: MongoClient)
                     _ => continue
                 };
 
+                let aliases = if chara.nicknames.is_empty() {
+                    None
+                } else {
+                    Some(chara.nicknames)
+                };
+
                 let item_type = match about {
                     Some(_) => ItemType32::Character,
                     None => ItemType32::CharacterImgOnly
@@ -336,7 +366,7 @@ async fn flatten(args: Args, mongo_client: MongoClient)
                     updated_at,
                     item_type,
                     rating: args.rating.to_32(),
-                    url: chara.url,
+                    url,
                     img,
                     parent: Some(Parent{
                         id: parent_id,
@@ -346,8 +376,8 @@ async fn flatten(args: Args, mongo_client: MongoClient)
                     name: chara.name,
                     name_english: None,
                     name_japanese: chara.name_kanji,
-                    aliases: chara.nicknames,
-                    studios: vec![],
+                    aliases,
+                    studios: None,
                     staff: flat_voice_actor,
                     description: about,
                 });

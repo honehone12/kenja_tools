@@ -42,10 +42,8 @@ pub struct FlatDocument {
     pub name: String,
     pub name_english: Option<String>,
     pub name_japanese: Option<String>,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    pub aliases: Vec<String>,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    pub studios: Vec<String>,
+    pub aliases: Option<Vec<String>>,
+    pub studios: Option<Vec<String>>,
     pub staff: Option<String>,
     pub description: Option<String>
 }
