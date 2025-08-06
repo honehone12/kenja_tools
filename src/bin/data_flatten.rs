@@ -221,11 +221,16 @@ async fn flatten(args: Args, mongo_client: MongoClient)
             _ => continue
         };
 
+        let item_type = match synopsis {
+            Some(_) => ItemType32::Anime,
+            None => ItemType32::AnimeImgOnly
+        };
+
         let updated_at = SystemTime::now().duration_since(UNIX_EPOCH)?.as_millis() as u64;
 
         let res = flat_cl.insert_one(FlatDocument{
             updated_at,
-            item_type: ItemType32::Anime,
+            item_type,
             rating: args.rating.to_32(),
             url: anime.url,
             img,
@@ -322,9 +327,14 @@ async fn flatten(args: Args, mongo_client: MongoClient)
                     _ => continue
                 };
 
+                let item_type = match about {
+                    Some(_) => ItemType32::Character,
+                    None => ItemType32::CharacterImgOnly
+                };
+
                 batch.push(FlatDocument{
                     updated_at,
-                    item_type: ItemType32::Character,
+                    item_type,
                     rating: args.rating.to_32(),
                     url: chara.url,
                     img,
