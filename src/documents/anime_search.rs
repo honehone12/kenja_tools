@@ -7,18 +7,16 @@ use serde_with::skip_serializing_none;
 #[repr(i32)]
 pub enum ItemType32 {
     Unspecified = 0,
-    Anime = 1,
-    Character = 2,
-    AnimeImgOnly = 3,
-    CharacterImgOnly = 4
+    Anime,
+    Character
 }
 
 #[derive(Serialize_repr, Deserialize_repr, PartialEq, Eq, Clone, Copy, Debug)]
 #[repr(i32)]
 pub enum Rating32 {
     Unspecified = 0,
-    AllAges = 1,
-    Hentai = 2
+    G,
+    X
 }
 
 #[skip_serializing_none]
@@ -42,10 +40,7 @@ pub struct FlatDocument {
     pub name: String,
     pub name_english: Option<String>,
     pub name_japanese: Option<String>,
-    pub aliases: Option<Vec<String>>,
-    pub studios: Option<Vec<String>>,
-    pub staff: Option<String>,
-    pub description: Option<String>
+    pub aliases: Option<Vec<String>>
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]

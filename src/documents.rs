@@ -36,8 +36,8 @@ impl Rating {
     #[inline]
     pub const fn to_32(&self) -> anime_search::Rating32 {
         match self {
-            Rating::AllAges => anime_search::Rating32::AllAges,
-            Rating::Hentai => anime_search::Rating32::Hentai,
+            Rating::AllAges => anime_search::Rating32::G,
+            Rating::Hentai => anime_search::Rating32::X,
         }
     }
 

@@ -20,8 +20,7 @@ use kenja_tools::{
             AnimeDocument, 
             CharacterDocument, 
             ImageUrls, 
-            Images, 
-            StaffDocument 
+            Images
         }, 
         anime_search::{
             FlatDocument, 
@@ -94,7 +93,6 @@ async fn flatten(args: Args, mongo_client: MongoClient)
     let ani_cl = src_db.collection::<AnimeDocument>(&env::var("FLT_SRC_ANI_CL")?);
     let ani_chara_cl = src_db.collection::<AniCharaBridge>(&env::var("FLT_SRC_ANI_CHARA_CL")?);
     let chara_cl = src_db.collection::<CharacterDocument>(&env::var("FLT_SRC_CHARA_CL")?);
-    let staff_cl = src_db.collection::<StaffDocument>(&env::var("FLT_SRC_STAFF_CL")?);
     
     let exist_cl = exist_db.collection::<FlatDocument>(&env::var("FLT_EXIST_CL")?);
     let flat_cl = dst_db.collection::<FlatDocument>(&env::var("FLT_DST_CL")?);
@@ -112,15 +110,10 @@ async fn flatten(args: Args, mongo_client: MongoClient)
         .try_collect::<Vec<CharacterDocument>>().await?;
     info!("{} character documets", chara_list.len());
 
-    let mut staff_list = staff_cl.find(doc! {}).await?
-        .try_collect::<Vec<StaffDocument>>().await?;
-    info!("{} staff documets", staff_list.len());
-
     let exist_list = exist_cl.find(doc! {}).await?
         .try_collect::<Vec<FlatDocument>>().await?;
     info!("{} exist documents", exist_list.len());
 
-    let allow_empty_text = matches!(args.rating, Rating::Hentai);
     let chrono_fmt = "%Y-%m-%dT%H:%M:%S%z";
     let Some(oldest) = NaiveDate::from_yo_opt(args.oldest, 1) else {
         bail!("could not find a day on the calendar");
@@ -164,48 +157,6 @@ async fn flatten(args: Args, mongo_client: MongoClient)
             continue;
         };
 
-        let synopsis = match anime.synopsis {
-            Some(s) if !s.is_empty() => Some(s),
-            _ => {
-                if allow_empty_text {
-                    None
-                } else {
-                    continue;
-                }
-            }
-        };
-
-        let staffs = match staff_list.iter().position(|s| s.mal_id == anime.mal_id) {
-            Some(idx) => {
-                let staffs = staff_list.remove(idx).staffs;
-                if staffs.is_empty() {
-                    None
-                } else {
-                    Some(staffs)
-                }
-            },
-            None => {
-                if allow_empty_text {
-                    None
-                } else {
-                    continue;
-                }
-            }
-        };
-
-        let flat_staff = match staffs {
-            Some(stfs) => Some(stfs.iter()
-                .map(|s| s.person.name.replace(',', "").replace('.', ""))
-                .collect::<Vec<String>>().join(". ")),
-            None => {
-                if allow_empty_text {
-                    None
-                } else {
-                    continue;
-                }
-            }
-        };
-
         let img = match anime.images {
             Some(Images{jpg: Some(ImageUrls{image_url: Some(s)})}) => {
                 if args.hash_img {
@@ -224,13 +175,6 @@ async fn flatten(args: Args, mongo_client: MongoClient)
                 }
             }
             _ => continue
-        };
-
-        let studios = if anime.studios.is_empty() {
-            None
-        } else {
-            Some(anime.studios.iter().map(|s| s.name.clone())
-                .collect::<Vec<String>>())
         }; 
 
         let aliases = if anime.title_synonyms.is_empty() {
@@ -239,16 +183,11 @@ async fn flatten(args: Args, mongo_client: MongoClient)
             Some(anime.title_synonyms)
         };
 
-        let item_type = match synopsis {
-            Some(_) => ItemType32::Anime,
-            None => ItemType32::AnimeImgOnly
-        };
-
         let updated_at = SystemTime::now().duration_since(UNIX_EPOCH)?.as_millis() as u64;
 
         let res = flat_cl.insert_one(FlatDocument{
             updated_at,
-            item_type,
+            item_type: ItemType32::Anime ,
             rating: args.rating.to_32(),
             url,
             img,
@@ -256,10 +195,7 @@ async fn flatten(args: Args, mongo_client: MongoClient)
             name: anime.title.clone(),
             name_english: anime.title_english,
             name_japanese: anime.title_japanese.clone(),
-            aliases,
-            studios,
-            staff: flat_staff,
-            description: synopsis,
+            aliases
         }).await?;
 
         let Some(parent_id) = res.inserted_id.as_object_id() else {
@@ -295,42 +231,6 @@ async fn flatten(args: Args, mongo_client: MongoClient)
                     continue;
                 };
 
-                let about = match chara.about {
-                    Some(s) if !s.is_empty() => Some(s),
-                    _ => {
-                        if allow_empty_text {
-                            None
-                        } else {
-                            continue;
-                        }
-                    }
-                };
-
-                let voice_actors = if cc.voice_actors.is_empty() {
-                    if allow_empty_text {
-                        None
-                    } else {
-                        continue;
-                    }
-                } else {
-                    Some(cc.voice_actors)
-                };
-
-                let flat_voice_actor = match voice_actors {
-                    Some(vos) => {
-                        Some(vos.iter()
-                            .map(|v| v.person.name.replace(',', "").replace('.', ""))
-                            .collect::<Vec<String>>().join(". "))
-                    }
-                    None => {
-                        if allow_empty_text {
-                            None
-                        } else {
-                            continue;
-                        }
-                    }
-                };
-
                 let img = match chara.images {
                     Some(Images{jpg: Some(ImageUrls{image_url: Some(s)})}) => {
                         if args.hash_img {
@@ -357,14 +257,9 @@ async fn flatten(args: Args, mongo_client: MongoClient)
                     Some(chara.nicknames)
                 };
 
-                let item_type = match about {
-                    Some(_) => ItemType32::Character,
-                    None => ItemType32::CharacterImgOnly
-                };
-
                 batch.push(FlatDocument{
                     updated_at,
-                    item_type,
+                    item_type: ItemType32::Character,
                     rating: args.rating.to_32(),
                     url,
                     img,
@@ -376,10 +271,7 @@ async fn flatten(args: Args, mongo_client: MongoClient)
                     name: chara.name,
                     name_english: None,
                     name_japanese: chara.name_kanji,
-                    aliases,
-                    studios: None,
-                    staff: flat_voice_actor,
-                    description: about,
+                    aliases
                 });
                 inserted_chara_list.push(chara.mal_id);
             }
