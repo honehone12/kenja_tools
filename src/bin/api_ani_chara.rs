@@ -1,6 +1,6 @@
 use std::{env, time::Duration};
 use tokio::time;
-use mongodb::{bson::{doc, Bson}, Client as MongoClient};
+use mongodb::{bson::doc, Client as MongoClient};
 use reqwest::Client as HttpClient;
 use clap::Parser;
 use serde_json::Value;
