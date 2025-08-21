@@ -94,3 +94,15 @@ pub struct StaffDocument {
     pub mal_id: i64,
     pub staffs: Vec<Staff>
 }
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct Link {
+    pub name: String,
+    pub url: String
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct LinkDocument {
+    pub mal_id: i64,
+    pub links: Vec<Link>
+}

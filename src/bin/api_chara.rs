@@ -22,27 +22,32 @@ async fn req_chara(
     mongo_client: MongoClient,
     http_client: HttpClient
 ) -> anyhow::Result<()> {
-    let db = mongo_client.database(&env::var("SEASON_DB")?);
-    let ani_chara_cl = db.collection::<AniCharaBridge>(&env::var("SEASON_ANI_CHARA_CL")?);
-    let chara_cl = db.collection::<Value>(&env::var("SEASON_CHARA_CL")?);
+    let src_db = mongo_client.database(&env::var("API_SRC_DB")?);
+    let src_cl = src_db.collection::<AniCharaBridge>(&env::var("API_SRC_CL")?);
+    
+    let dst_db = mongo_client.database(&env::var("API_DST_DB")?);  
+    let dst_cl = dst_db.collection::<Value>(&env::var("API_DST_CL")?);
     
     let interval = Duration::from_millis(args.interval_mil);
     let timeout = Duration::from_millis(args.timeout_mil);
 
     let base_url = env::var("BASE_API_URL")?;
     info!("getting flat url list");
-    let chara_list = chara_cl.distinct("mal_id", doc! {}).await?.iter()
+
+    let done = dst_cl.distinct("mal_id", doc! {}).await?.iter()
         .filter_map(|bson| bson.as_i64())
         .collect::<Vec<i64>>();
 
-    let mut ani_chara_stream = ani_chara_cl.find(doc! {}).await?;
+    let list = src_cl.find(doc! {}).await?
+        .try_collect::<Vec<AniCharaBridge>>().await?;
     let mut total = 0;
     
-    while let Some(bridge) = ani_chara_stream.try_next().await? {
+    // this stream should be cached
+    for bridge in list {
         let mut batch = vec![];
         
         for chara_cast in bridge.characters {
-            if chara_list.contains(&chara_cast.character.mal_id) {
+            if done.contains(&chara_cast.character.mal_id) {
                 continue;
             }
 
@@ -60,7 +65,7 @@ async fn req_chara(
         total += 1;
 
         if !batch.is_empty() {
-            let res = chara_cl.insert_many(&batch).await?;
+            let res = dst_cl.insert_many(&batch).await?;
             info!("iteration {total}. inserted {} items", res.inserted_ids.len());
         }
     }

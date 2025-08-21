@@ -16,6 +16,13 @@ pub struct AnimeStaffs {
     pub staffs: Vec<Value>
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+
+pub struct AnimeLinks {
+    pub mal_id: i64,
+    pub links: Vec<Value>
+}
+
 #[derive(ValueEnum, Clone, Debug)]
 pub enum Season {
     Winter,

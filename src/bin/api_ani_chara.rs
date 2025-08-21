@@ -21,39 +21,46 @@ async fn req_ani_chara(
     mongo_client: MongoClient, 
     http_client: HttpClient
 ) -> anyhow::Result<()> {
-    let db = mongo_client.database(&env::var("SEASON_DB")?);
-    let source = db.collection::<Value>(&env::var("SEASON_ANI_CL")?);
-    let collection = db.collection::<AnimeCharacters>(&env::var("SEASON_ANI_CHARA_CL")?);
+    let src_db = mongo_client.database(&env::var("API_SRC_DB")?);
+    let src_cl = src_db.collection::<Value>(&env::var("API_SRC_CL")?);
+
+    let dst_db = mongo_client.database(&env::var("API_DST_DB")?);
+    let dst_cl = dst_db.collection::<AnimeCharacters>(&env::var("API_DST_CL")?);
 
     let base_url = env::var("BASE_API_URL")?;
 
     let interval = Duration::from_millis(args.interval_mil);
     let timeout = Duration::from_millis(args.timeout_mil);
 
-    let list = source.distinct("mal_id", doc! {}).await?;
+    let done = dst_cl.distinct("mal_id", doc! {}).await?.iter()
+        .filter_map(|bson| bson.as_i64())
+        .collect::<Vec<i64>>();
+    let list = src_cl.distinct("mal_id", doc! {}).await?.iter()
+        .filter_map(|bson| bson.as_i64())
+        .collect::<Vec<i64>>();
     let total = list.len();
 
-    for (i, bson) in list.iter().enumerate() {
-        if let Bson::Int64(mal_id) = bson {
-            info!("{i}/{total}");
-            let url = format!("{base_url}/anime/{mal_id}/characters");
-            match request(&http_client, timeout, &url).await {
-                Err(e) => warn!("request failed. {e}. skipping"),
-                Ok((data, _)) => {
-                    if data.is_empty() {
-                        info!("data is empty");
-                    } else {
-                        let anime_chara = AnimeCharacters{
-                            mal_id: *mal_id,
-                            characters: data
-                        };
-                        _ = collection.insert_one(anime_chara).await?;
-                        info!("inserted a item");
-                    }
+    for (i, mal_id) in list.iter().enumerate() {
+        if done.contains(mal_id) {
+            continue;
+        }
+
+        info!("{i}/{total}");
+        let url = format!("{base_url}/anime/{mal_id}/characters");
+        match request(&http_client, timeout, &url).await {
+            Err(e) => warn!("request failed. {e}. skipping"),
+            Ok((data, _)) => {
+                if data.is_empty() {
+                    info!("data is empty");
+                } else {
+                    let anime_chara = AnimeCharacters{
+                        mal_id: *mal_id,
+                        characters: data
+                    };
+                    _ = dst_cl.insert_one(anime_chara).await?;
+                    info!("inserted a item");
                 }
             }
-        } else {
-            warn!("skipping unexpected value {i}/{total}:{bson}");
         }
 
         time::sleep(interval).await;
