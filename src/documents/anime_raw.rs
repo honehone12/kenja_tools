@@ -10,17 +10,21 @@ pub struct AnimeCharacters {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-
 pub struct AnimeStaffs {
     pub mal_id: i64,
     pub staffs: Vec<Value>
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-
 pub struct AnimeLinks {
     pub mal_id: i64,
     pub links: Vec<Value>
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct AnimeVideos {
+    pub mal_id: i64,
+    pub videos: Vec<Value>
 }
 
 #[derive(ValueEnum, Clone, Debug)]

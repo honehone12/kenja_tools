@@ -26,7 +26,7 @@ pub struct Studio {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct AnimeDocument {
+pub struct AnimeSrc {
     pub mal_id: i64,
     pub url: String,
     pub images: Option<Images>,
@@ -45,7 +45,7 @@ pub struct AnimeDocument {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct CharacterDocument {
+pub struct CharacterSrc {
     pub mal_id: i64,
     pub url: String,
     pub images: Option<Images>,
@@ -90,7 +90,7 @@ pub struct Staff {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct StaffDocument {
+pub struct StaffSrc {
     pub mal_id: i64,
     pub staffs: Vec<Staff>
 }
@@ -102,7 +102,38 @@ pub struct Link {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct LinkDocument {
+pub struct LinkSrc {
     pub mal_id: i64,
     pub links: Vec<Link>
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct YoutubeImages {
+    pub image_url: String
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct YoutubeVideo {
+    pub youtube_id: String,
+    pub url: String,
+    pub embed_url: String,
+    pub images: YoutubeImages 
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct PromoVideo {
+    pub title: String,
+    pub trailer: YoutubeVideo
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct MusicVideo {
+    pub title: String,
+    pub video: YoutubeVideo
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct VideoSrc {
+    pub promo: Vec<PromoVideo>,
+    pub music_videos: Vec<MusicVideo>
 }

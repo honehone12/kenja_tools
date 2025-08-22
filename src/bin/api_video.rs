@@ -5,7 +5,7 @@ use reqwest::Client as HttpClient;
 use clap::Parser;
 use serde_json::Value;
 use tracing::{info, warn};
-use kenja_tools::{documents::anime_raw::AnimeLinks, api::request};
+use kenja_tools::{documents::anime_raw::AnimeVideos, api::request};
 
 #[derive(Parser)]
 #[command(version)]
@@ -16,7 +16,7 @@ struct Args {
     timeout_mil: u64
 }
 
-async fn req_ani_chara(
+async fn req_ani_video(
     args: Args,
     mongo_client: MongoClient, 
     http_client: HttpClient
@@ -25,7 +25,7 @@ async fn req_ani_chara(
     let src_cl = src_db.collection::<Value>(&env::var("API_SRC_CL")?);
     
     let dst_db = mongo_client.database(&env::var("API_DST_DB")?);
-    let dst_cl = dst_db.collection::<AnimeLinks>(&env::var("API_DST_CL")?);
+    let dst_cl = dst_db.collection::<AnimeVideos>(&env::var("API_DST_CL")?);
 
     let base_url = env::var("BASE_API_URL")?;
 
@@ -46,16 +46,16 @@ async fn req_ani_chara(
         }
 
         info!("{i}/{total}");
-        let url = format!("{base_url}/anime/{mal_id}/external");
+        let url = format!("{base_url}/anime/{mal_id}/videos");
         match request(&http_client, timeout, &url).await {
             Err(e) => warn!("request failed. {e}. skipping"),
             Ok((data, _)) => {
                 if data.is_empty() {
                     info!("data is empty");
                 } else {
-                    let anime_links = AnimeLinks{
+                    let anime_links = AnimeVideos{
                         mal_id: *mal_id,
-                        links: data
+                        videos: data
                     };
                     _ = dst_cl.insert_one(anime_links).await?;
                     info!("inserted a item");
@@ -81,5 +81,5 @@ async fn main() -> anyhow::Result<()> {
 
     let http_client = HttpClient::new();
     
-    req_ani_chara(args, mongo_client, http_client).await
+    req_ani_video(args, mongo_client, http_client).await
 }

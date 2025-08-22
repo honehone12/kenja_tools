@@ -6,7 +6,7 @@ use reqwest::Client as HttpClient;
 use clap::Parser;
 use serde_json::Value;
 use tracing::{info, warn};
-use kenja_tools::{documents::anime::AniCharaBridge, api::request};
+use kenja_tools::{documents::anime_src::AniCharaBridge, api::request};
 
 #[derive(Parser)]
 #[command(version)]

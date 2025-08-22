@@ -15,10 +15,10 @@ use mongodb::{bson::doc, Client as MongoClient};
 use tracing::{info, warn};
 use kenja_tools::{
     documents::{
-        anime::{
+        anime_src::{
             AniCharaBridge, 
-            AnimeDocument, 
-            CharacterDocument, 
+            AnimeSrc, 
+            CharacterSrc, 
             ImageUrls, 
             Images
         }, 
@@ -90,15 +90,15 @@ async fn flatten(args: Args, mongo_client: MongoClient)
     let dst_db = mongo_client.database(&env::var("FLT_DST_DB")?);
     let exist_db = mongo_client.database(&env::var("FLT_EXIST_DB")?);
 
-    let ani_cl = src_db.collection::<AnimeDocument>(&env::var("FLT_SRC_ANI_CL")?);
+    let ani_cl = src_db.collection::<AnimeSrc>(&env::var("FLT_SRC_ANI_CL")?);
     let ani_chara_cl = src_db.collection::<AniCharaBridge>(&env::var("FLT_SRC_ANI_CHARA_CL")?);
-    let chara_cl = src_db.collection::<CharacterDocument>(&env::var("FLT_SRC_CHARA_CL")?);
+    let chara_cl = src_db.collection::<CharacterSrc>(&env::var("FLT_SRC_CHARA_CL")?);
     
     let exist_cl = exist_db.collection::<FlatDocument>(&env::var("FLT_EXIST_CL")?);
     let flat_cl = dst_db.collection::<FlatDocument>(&env::var("FLT_DST_CL")?);
 
     let mut ani_list = ani_cl.find(doc! {}).await?
-        .try_collect::<Vec<AnimeDocument>>().await?;
+        .try_collect::<Vec<AnimeSrc>>().await?;
     ani_list.sort_unstable_by_key(|d| d.mal_id);
     info!("{} anime documents", ani_list.len());
     
@@ -107,7 +107,7 @@ async fn flatten(args: Args, mongo_client: MongoClient)
     info!("{} anime-chara bridges", ani_chara_list.len());
 
     let mut chara_list = chara_cl.find(doc! {}).await?
-        .try_collect::<Vec<CharacterDocument>>().await?;
+        .try_collect::<Vec<CharacterSrc>>().await?;
     info!("{} character documets", chara_list.len());
 
     let exist_list = exist_cl.find(doc! {}).await?
