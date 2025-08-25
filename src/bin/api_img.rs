@@ -10,8 +10,6 @@ use tracing::{info, warn};
 #[derive(Parser)]
 #[command(version)]
 struct Args {
-    #[arg(long, default_value_t = 100000)]
-    iteration: u32,
     #[arg(long, default_value_t = 1500)]
     interval_mil: u64,
     #[arg(long, default_value_t = 10000)]
@@ -23,8 +21,8 @@ async fn img(
     mongo_client: MongoClient,
     http_client: HttpClient
 ) -> anyhow::Result<()> {
-    let db = mongo_client.database(&env::var("SEARCH_DB")?);
-    let colle = db.collection::<ImgSrc>(&env::var("FLAT_CL")?);
+    let db = mongo_client.database(&env::var("API_SRC_DB")?);
+    let colle = db.collection::<ImgSrc>(&env::var("API_SRC_CL")?);
     info!("obtaining documents...");
     let img_list = colle.find(doc! {}).await?.try_collect::<Vec<ImgSrc>>().await?;
     let list_total = img_list.len();
@@ -56,10 +54,6 @@ async fn img(
         total += 1;
         it += 1;
         info!("iteration {it} {total}/{list_total}"); 
-        if it >= args.iteration {
-            info!("quit on max iteration");
-            break;
-        }
         
         time::sleep(interval).await;
     }
