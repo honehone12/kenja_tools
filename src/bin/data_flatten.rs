@@ -1,34 +1,24 @@
-use std::{
-    env, 
-    path::PathBuf, 
-    str::FromStr, 
-    time::{SystemTime, UNIX_EPOCH}, 
-    vec
-};
-use tokio::fs;
+use std::{env, time::{SystemTime, UNIX_EPOCH}, vec};
 use clap::Parser;
 use anyhow::bail;
-use url::Url;
 use chrono::NaiveDate;
 use futures::TryStreamExt;
 use mongodb::{bson::doc, Client as MongoClient};
-use tracing::{info, warn};
+use tracing::info;
 use kenja_tools::{
+    data::{create_new_img, is_expected_media_type, is_hentai_str}, 
     documents::{
+        anime_search::{
+            FlatDocument, ItemType, Parent
+        }, 
         anime_src::{
             AniCharaBridge, 
             AnimeSrc, 
             CharacterSrc, 
             ImageUrls, 
-            Images
-        }, 
-        anime_search::{
-            FlatDocument, 
-            ItemType32, 
-            Parent
-        }, 
-        Rating
-    }, is_expected_media_type
+            Images, LinkSrc
+        }
+    }
 };
 
 #[derive(Parser)]
@@ -36,54 +26,22 @@ use kenja_tools::{
 struct Args {
     #[arg(long, default_value_t = 1965)]
     oldest: i32,
-    #[arg(long, default_value_t = 4)]
-    anime_likes: u64,
-    #[arg(long, default_value_t = 6)]
-    chara_likes: u64,
-    #[arg(long, value_enum)]
-    rating: Rating,
+    #[arg(long, default_value_t = 10)]
+    min_anime_likes: u64,
+    #[arg(long, default_value_t = u64::MAX)]
+    max_anime_likes: u64,
+    #[arg(long, default_value_t = 5)]
+    min_chara_likes: u64,
+    #[arg(long, default_value_t = u64::MAX)]
+    max_chara_likes: u64,
     #[arg(long)]
-    hash_img: bool
-}
-
-async fn create_new_img(
-    raw_img_root: &str,
-    merged_img_root: &str, 
-    new_img_root: &str,
-    unique_url: &str,
-    img_url: &str,
-) -> anyhow::Result<Option<String>> {
-    
-    let u = Url::parse(img_url)?;
-    let mut p = u.path().to_string();
-    p.remove(0);
-    let path = PathBuf::from_str(raw_img_root)?.join(p);
-
-    if !fs::try_exists(&path).await? {
-        warn!("file {path:?} does not exits");
-        return Ok(None);
-    }
-    
-    let hash = blake3::hash(unique_url.as_bytes());
-    let hash = hash.as_bytes();
-    let hex = hex::encode(&hash[..16]);
-
-    let new_file = format!("{hex}.jpg");
-    let new_path = PathBuf::from_str(merged_img_root)?.join(&new_file);
-    if fs::try_exists(new_path).await? {
-        return Ok(Some(new_file))
-    }
-    
-    let new_path = PathBuf::from_str(new_img_root)?.join(&new_file);
-    fs::copy(path, new_path).await?;
-
-    Ok(Some(new_file))
+    new_img: bool
 }
 
 async fn flatten(args: Args, mongo_client: MongoClient) 
 -> anyhow::Result<()> {
     let raw_img_root = env::var("RAW_IMG_ROOT")?;
-    let merged_img_root = env::var("MERGED_IMG_ROOT")?;
+    let exist_img_root = env::var("EXIST_IMG_ROOT")?;
     let new_img_root = env::var("NEW_IMG_ROOT")?;
 
     let src_db = mongo_client.database(&env::var("FLT_SRC_DB")?);
@@ -93,26 +51,28 @@ async fn flatten(args: Args, mongo_client: MongoClient)
     let ani_cl = src_db.collection::<AnimeSrc>(&env::var("FLT_SRC_ANI_CL")?);
     let ani_chara_cl = src_db.collection::<AniCharaBridge>(&env::var("FLT_SRC_ANI_CHARA_CL")?);
     let chara_cl = src_db.collection::<CharacterSrc>(&env::var("FLT_SRC_CHARA_CL")?);
+    let links_cl = src_db.collection::<LinkSrc>(&env::var("FLT_SRC_LINKS_CL")?);
     
     let exist_cl = exist_db.collection::<FlatDocument>(&env::var("FLT_EXIST_CL")?);
     let flat_cl = dst_db.collection::<FlatDocument>(&env::var("FLT_DST_CL")?);
 
+    info!("obtaining data. this will take a while.");
     let mut ani_list = ani_cl.find(doc! {}).await?
         .try_collect::<Vec<AnimeSrc>>().await?;
     ani_list.sort_unstable_by_key(|d| d.mal_id);
-    info!("{} anime documents", ani_list.len());
     
     let mut ani_chara_list = ani_chara_cl.find(doc! {}).await?
         .try_collect::<Vec<AniCharaBridge>>().await?;
-    info!("{} anime-chara bridges", ani_chara_list.len());
 
     let mut chara_list = chara_cl.find(doc! {}).await?
         .try_collect::<Vec<CharacterSrc>>().await?;
-    info!("{} character documets", chara_list.len());
 
-    let exist_list = exist_cl.find(doc! {}).await?
-        .try_collect::<Vec<FlatDocument>>().await?;
-    info!("{} exist documents", exist_list.len());
+    let link_list = links_cl.find(doc!{}).await?
+        .try_collect::<Vec<LinkSrc>>().await?;
+
+    let exist_list = exist_cl.distinct("url", doc! {}).await?.iter()
+        .filter_map(|bson| bson.as_str().map(|s| s.to_string()))
+        .collect::<Vec<String>>();
 
     let chrono_fmt = "%Y-%m-%dT%H:%M:%S%z";
     let Some(oldest) = NaiveDate::from_yo_opt(args.oldest, 1) else {
@@ -123,6 +83,10 @@ async fn flatten(args: Args, mongo_client: MongoClient)
     let mut batch = vec![];
     let mut inserted_chara_list = vec![];
     for anime in ani_list {
+        if exist_list.contains(&anime.url) {
+            continue;
+        }
+
         match anime.aired.from {
             Some(s) => {
                 let date = NaiveDate::parse_from_str(&s, &chrono_fmt)?;
@@ -139,33 +103,41 @@ async fn flatten(args: Args, mongo_client: MongoClient)
         };
 
         match anime.rating {
-            Some(s) => {
-                if !args.rating.match_str(&s) {
-                    continue;
-                }
-            }
-            None => continue
+            Some(s) if !is_hentai_str(&s) => (),
+            _ => continue
         }
 
-        if anime.favorites < args.anime_likes {
+        if anime.favorites < args.min_anime_likes 
+            || anime.favorites > args.max_anime_likes 
+        {
             continue;
         }
 
-        let url = if exist_list.iter().find(|f| f.url == anime.url).is_none() {
-            anime.url.clone()
+        if anime.synopsis.is_none_or(|s| s.is_empty()) {
+            continue;
+        }
+
+        let license = if anime.producers.is_empty() {
+            continue;
         } else {
-            continue;
+            anime.producers.iter().map(|p| p.name.clone()).collect::<Vec<String>>()
         };
 
+        let url = match link_list.iter().find(|l| l.mal_id == anime.mal_id) {
+            Some(l) => l.links.iter().find(|l| l.name == "Official Site")
+                .map(|l| l.url.clone()),
+            None => None
+        };
+          
         let img = match anime.images {
             Some(Images{jpg: Some(ImageUrls{image_url: Some(s)})}) => {
-                if args.hash_img {
+                if args.new_img {
                     let Some(img) = create_new_img(
                         &raw_img_root,
-                        &merged_img_root, 
+                        &exist_img_root, 
                         &new_img_root,
-                        &anime.url, 
-                        &s
+                        &s,
+                        ItemType::Anime
                     ).await? else {
                         continue;
                     };
@@ -177,26 +149,19 @@ async fn flatten(args: Args, mongo_client: MongoClient)
             _ => continue
         }; 
 
-        let aliases = if anime.title_synonyms.is_empty() {
-            None
-        } else {
-            Some(anime.title_synonyms)
-        };
-
         let updated_at = SystemTime::now().duration_since(UNIX_EPOCH)?.as_millis() as u64;
 
-        let res = flat_cl.insert_one(FlatDocument{
+        let res = flat_cl.insert_one(FlatDocument::new_anime(
             updated_at,
-            item_type: ItemType32::Anime ,
-            rating: args.rating.to_32(),
+            ItemType::Anime,
             url,
+            license,
             img,
-            parent: None,
-            name: anime.title.clone(),
-            name_english: anime.title_english,
-            name_japanese: anime.title_japanese.clone(),
-            aliases
-        }).await?;
+            anime.url,
+            anime.title.clone(),
+            anime.title_english,
+            anime.title_japanese.clone(),
+        )).await?;
 
         let Some(parent_id) = res.inserted_id.as_object_id() else {
             bail!("inserted object id is empty")
@@ -209,37 +174,40 @@ async fn flatten(args: Args, mongo_client: MongoClient)
         {
             let bridge = ani_chara_list.remove(idx);
             for cc in bridge.characters {
-                let Some(idx) = chara_list.iter_mut()
-                    .position(|c| c.mal_id == cc.character.mal_id)
-                else {
-                    continue;
+                let chara = match chara_list.iter_mut()
+                    .position(|c| c.mal_id == cc.character.mal_id) 
+                {
+                    Some(idx) => chara_list.remove(idx),
+                    None => continue
                 };
-
-                let chara = chara_list.remove(idx);
 
                 if inserted_chara_list.contains(&chara.mal_id) {
                     continue;
                 }
                 
-                if chara.favorites < args.chara_likes {
+                if exist_list.contains(&chara.url) {
                     continue;
                 }
 
-                let url = if exist_list.iter().find(|f| f.url == chara.url).is_none() {
-                    chara.url.clone()
-                } else {
+                if chara.favorites < args.min_chara_likes 
+                    || chara.favorites > args.max_chara_likes 
+                {
+                    continue;    
+                }
+
+                if chara.about.is_none_or(|a| a.is_empty()) {
                     continue;
-                };
+                } 
 
                 let img = match chara.images {
                     Some(Images{jpg: Some(ImageUrls{image_url: Some(s)})}) => {
-                        if args.hash_img {
+                        if args.new_img {
                             let Some(img) = create_new_img(
                                 &raw_img_root,
-                                &merged_img_root, 
+                                &exist_img_root, 
                                 &new_img_root,
-                                &chara.url, 
-                                &s
+                                &s,
+                                ItemType::Character
                             ).await? else {
                                 continue;
                             };
@@ -251,28 +219,19 @@ async fn flatten(args: Args, mongo_client: MongoClient)
                     _ => continue
                 };
 
-                let aliases = if chara.nicknames.is_empty() {
-                    None
-                } else {
-                    Some(chara.nicknames)
-                };
-
-                batch.push(FlatDocument{
+                batch.push(FlatDocument::new_character(
                     updated_at,
-                    item_type: ItemType32::Character,
-                    rating: args.rating.to_32(),
-                    url,
+                    ItemType::Character,
                     img,
-                    parent: Some(Parent{
+                    chara.url,
+                    Parent{
                         id: parent_id,
                         name: anime.title.clone(),
                         name_japanese: anime.title_japanese.clone(),
-                    }),
-                    name: chara.name,
-                    name_english: None,
-                    name_japanese: chara.name_kanji,
-                    aliases
-                });
+                    },
+                    chara.name,
+                    chara.name_kanji,
+                ));
                 inserted_chara_list.push(chara.mal_id);
             }
         }

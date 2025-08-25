@@ -6,11 +6,6 @@ pub struct AiredPeriod {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct Genre {
-    pub name: String
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct ImageUrls {
     pub image_url: Option<String>
 }
@@ -21,9 +16,10 @@ pub struct Images {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct Studio {
+pub struct Producer {
     pub name: String
 }
+
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct AnimeSrc {
@@ -37,10 +33,8 @@ pub struct AnimeSrc {
     pub title: String,
     pub title_english: Option<String>,
     pub title_japanese: Option<String>,
-    pub title_synonyms: Vec<String>,
     pub synopsis: Option<String>,
-    pub season: Option<String>,
-    pub studios: Vec<Studio>,
+    pub producers: Vec<Producer>,
     pub favorites: u64
 }
 
@@ -51,7 +45,6 @@ pub struct CharacterSrc {
     pub images: Option<Images>,
     pub name: String,
     pub name_kanji: Option<String>,
-    pub nicknames: Vec<String>,
     pub about: Option<String>,
     pub favorites: u64
 }
@@ -136,4 +129,9 @@ pub struct MusicVideo {
 pub struct VideoSrc {
     pub promo: Vec<PromoVideo>,
     pub music_videos: Vec<MusicVideo>
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct ImgSrc {
+    pub img: String,
 }

@@ -4,7 +4,7 @@ use tokio::{fs, time};
 use mongodb::{bson::doc, Client as MongoClient};
 use reqwest::{Client as HttpClient, Url};
 use clap::Parser;
-use kenja_tools::{api::request_img, documents::anime_search::Img};
+use kenja_tools::{api::request_img, documents::anime_src::ImgSrc};
 use tracing::{info, warn};
 
 #[derive(Parser)]
@@ -24,9 +24,9 @@ async fn img(
     http_client: HttpClient
 ) -> anyhow::Result<()> {
     let db = mongo_client.database(&env::var("SEARCH_DB")?);
-    let colle = db.collection::<Img>(&env::var("FLAT_CL")?);
+    let colle = db.collection::<ImgSrc>(&env::var("FLAT_CL")?);
     info!("obtaining documents...");
-    let img_list = colle.find(doc! {}).await?.try_collect::<Vec<Img>>().await?;
+    let img_list = colle.find(doc! {}).await?.try_collect::<Vec<ImgSrc>>().await?;
     let list_total = img_list.len();
     
     let interval = Duration::from_millis(args.interval_mil);
