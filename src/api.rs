@@ -91,8 +91,9 @@ pub async fn request_img(
     info!("requesting {url}");
 
     let res = http_client.get(url).timeout(timeout).send().await?;
-    if res.status() != StatusCode::OK {
-        bail!("failed to request img");
+    let st = res.status(); 
+    if st != StatusCode::OK {
+        bail!("failed to request img with status: {st}");
     }
 
     let file_name = PathBuf::from_str(file_name)?;

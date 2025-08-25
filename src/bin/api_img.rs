@@ -35,6 +35,10 @@ async fn img(
     let mut it = 0u32;
     let mut total = 0u32;
     for img in img_list {
+        if img.img.contains("icon") {
+            continue;
+        }
+
         let url = Url::parse(&img.img)?;
         let file_name = format!("{img_root}{}", url.path());
         if fs::try_exists(&file_name).await? {
