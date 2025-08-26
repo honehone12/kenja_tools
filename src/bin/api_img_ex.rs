@@ -25,41 +25,48 @@ async fn img_ex(
 ) -> anyhow::Result<()> {
     let json = fs::read_to_string(&args.list).await?;
     let id_list = serde_json::from_str::<Vec<i64>>(&json)?;
-    let list_total = id_list.len();
-
+    
     let src_db = mongo_client.database(&env::var("API_SRC_DB")?);
     let src_cl = src_db.collection::<ImgExSrc>(&env::var("API_SRC_CL")?);
-
+    
     info!("obtaining documents...");
     let mut img_ex_list = src_cl.find(doc! {}).await?.try_collect::<Vec<ImgExSrc>>().await?;
     
     let interval = Duration::from_millis(args.interval_mil);
     let timeout = Duration::from_millis(args.timeout_mil);
-
+    
     let img_root = env::var("RAW_IMG_ROOT")?;
-
+    
+    let list_total = id_list.len();
     let mut total = 0u32;
     for id in id_list {
         let Some(idx) = img_ex_list.iter().position(|img| img.mal_id == id) else {
+            total += 1;
             continue;
         };
 
         let img_ex = img_ex_list.remove(idx);
 
+        let inner_list_total = img_ex.pictures.len();
+        let mut inner_total = 0u32;
         for imgs in img_ex.pictures {
             let img = match imgs.jpg {
                 Some(ImageUrls{image_url: Some(s)}) => s,
-                _ => continue
+                _ => {
+                    inner_total += 1;
+                    continue;
+                }
             };
 
             if img.contains("icon") {
+                inner_total += 1;
                 continue;
             }
 
             let url = Url::parse(&img)?;
             let file_name = format!("{img_root}{}", url.path());
             if fs::try_exists(&file_name).await? {
-                total += 1;
+                inner_total += 1;
                 continue;
             }
 
@@ -72,11 +79,14 @@ async fn img_ex(
                 warn!("{e}");
             };
 
-            total += 1;
-            info!("{total}/{list_total}"); 
+            inner_total += 1;
+            info!("{inner_total}/{inner_list_total}"); 
             
             time::sleep(interval).await;
         }
+
+        total += 1;
+        info!("{total}/{list_total}"); 
     }
 
     info!("done");
