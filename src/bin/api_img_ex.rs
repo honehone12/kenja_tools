@@ -13,7 +13,9 @@ struct Args {
     #[arg(long, default_value_t = 1500)]
     interval_mil: u64,
     #[arg(long, default_value_t = 10000)]
-    timeout_mil: u64
+    timeout_mil: u64,
+    #[arg(long)]
+    list: String
 }
 
 async fn img_ex(
@@ -21,11 +23,14 @@ async fn img_ex(
     mongo_client: MongoClient,
     http_client: HttpClient
 ) -> anyhow::Result<()> {
-    let db = mongo_client.database(&env::var("API_SRC_DB")?);
-    let colle = db.collection::<ImgExSrc>(&env::var("API_SRC_CL")?);
+    let json = fs::read_to_string(&args.list).await?;
+    let id_list = serde_json::from_str::<Vec<i64>>(&json)?;
+
+    let src_db = mongo_client.database(&env::var("API_SRC_DB")?);
+    let src_cl = src_db.collection::<ImgExSrc>(&env::var("API_SRC_CL")?);
 
     info!("obtaining documents...");
-    let img_ex_list = colle.find(doc! {}).await?.try_collect::<Vec<ImgExSrc>>().await?;
+    let mut img_ex_list = src_cl.find(doc! {}).await?.try_collect::<Vec<ImgExSrc>>().await?;
     let list_total = img_ex_list.len();
     
     let interval = Duration::from_millis(args.interval_mil);
@@ -35,13 +40,18 @@ async fn img_ex(
 
     let mut it = 0u32;
     let mut total = 0u32;
-    for img_ex in img_ex_list {
+    for id in id_list {
+        let Some(idx) = img_ex_list.iter().position(|img| img.mal_id == id) else {
+            continue;
+        };
+
+        let img_ex = img_ex_list.remove(idx);
+
         for imgs in img_ex.pictures {
             let img = match imgs.jpg {
                 Some(ImageUrls{image_url: Some(s)}) => s,
                 _ => continue
             };
-
 
             if img.contains("icon") {
                 continue;

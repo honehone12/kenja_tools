@@ -5,3 +5,5 @@
 
 .env
 Cargo.lock
+
+*.json

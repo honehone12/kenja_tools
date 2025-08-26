@@ -4,6 +4,7 @@ use anyhow::bail;
 use chrono::NaiveDate;
 use futures::TryStreamExt;
 use mongodb::{bson::doc, Client as MongoClient};
+use tokio::fs;
 use tracing::info;
 use kenja_tools::{
     data::{create_new_img, is_expected_media_type, is_hentai_str}, 
@@ -76,6 +77,7 @@ async fn flatten(args: Args, mongo_client: MongoClient)
     info!("start flattening");
     let mut batch = vec![];
     let mut inserted_chara_list = vec![];
+    let mut inserted_ani_list = vec![];
     for anime in ani_list {
         match anime.aired.from {
             Some(s) => {
@@ -145,6 +147,8 @@ async fn flatten(args: Args, mongo_client: MongoClient)
             anime.title_english,
             anime.title_japanese.clone(),
         ));
+
+        inserted_ani_list.push(anime.mal_id);
 
         if let Some(idx) = ani_chara_list.iter_mut()
             .position(|b| b.mal_id == anime.mal_id)
@@ -220,6 +224,10 @@ async fn flatten(args: Args, mongo_client: MongoClient)
         let result = flat_cl.insert_many(&batch).await?;
         info!("inserted {}items", result.inserted_ids.len());
     }
+
+    let ani_list_json = serde_json::to_string(&inserted_ani_list)?;
+    fs::write("inserted_anime_list.json", ani_list_json).await?;
+
     info!("done");
     Ok(())
 }
