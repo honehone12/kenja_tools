@@ -25,13 +25,13 @@ async fn img_ex(
 ) -> anyhow::Result<()> {
     let json = fs::read_to_string(&args.list).await?;
     let id_list = serde_json::from_str::<Vec<i64>>(&json)?;
+    let list_total = id_list.len();
 
     let src_db = mongo_client.database(&env::var("API_SRC_DB")?);
     let src_cl = src_db.collection::<ImgExSrc>(&env::var("API_SRC_CL")?);
 
     info!("obtaining documents...");
     let mut img_ex_list = src_cl.find(doc! {}).await?.try_collect::<Vec<ImgExSrc>>().await?;
-    let list_total = img_ex_list.len();
     
     let interval = Duration::from_millis(args.interval_mil);
     let timeout = Duration::from_millis(args.timeout_mil);
