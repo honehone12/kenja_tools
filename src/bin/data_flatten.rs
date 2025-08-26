@@ -146,8 +146,6 @@ async fn flatten(args: Args, mongo_client: MongoClient)
             anime.title_japanese.clone(),
         ));
 
-        info!("inserted a item");
-
         if let Some(idx) = ani_chara_list.iter_mut()
             .position(|b| b.mal_id == anime.mal_id)
         {
