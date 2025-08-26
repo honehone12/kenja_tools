@@ -23,6 +23,7 @@ async fn img(
 ) -> anyhow::Result<()> {
     let db = mongo_client.database(&env::var("API_SRC_DB")?);
     let colle = db.collection::<ImgSrc>(&env::var("API_SRC_CL")?);
+    
     info!("obtaining documents...");
     let img_list = colle.find(doc! {}).await?.try_collect::<Vec<ImgSrc>>().await?;
     let list_total = img_list.len();

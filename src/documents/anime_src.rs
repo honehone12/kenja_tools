@@ -135,3 +135,9 @@ pub struct VideoSrc {
 pub struct ImgSrc {
     pub img: String,
 }
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct ImgExSrc {
+    pub mal_id: i64,
+    pub pictures: Vec<Images>
+}
