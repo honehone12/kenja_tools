@@ -116,16 +116,16 @@ async fn flatten(args: Args, mongo_client: MongoClient)
         let img = match anime.images {
             Some(Images{jpg: Some(ImageUrls{image_url: Some(s)})}) => {
                 if args.new_img {
-                    let Some(img) = create_new_img(
+                    match create_new_img(
                         &raw_img_root,
                         &exist_img_root, 
                         &new_img_root,
                         &s,
                         ItemType::Anime
-                    ).await? else {
-                        continue;
-                    };
-                    img
+                    ).await? {
+                        Some(s) => s,
+                        None => continue
+                    }
                 } else {
                     s
                 }
@@ -177,16 +177,16 @@ async fn flatten(args: Args, mongo_client: MongoClient)
                 let img = match chara.images {
                     Some(Images{jpg: Some(ImageUrls{image_url: Some(s)})}) => {
                         if args.new_img {
-                            let Some(img) = create_new_img(
+                            match create_new_img(
                                 &raw_img_root,
                                 &exist_img_root, 
                                 &new_img_root,
                                 &s,
                                 ItemType::Character
-                            ).await? else {
-                                continue;
-                            };
-                            img
+                            ).await? {
+                                Some(s) => s,
+                                None => continue
+                            }
                         } else {
                             s
                         }
