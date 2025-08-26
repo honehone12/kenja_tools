@@ -38,7 +38,6 @@ async fn img_ex(
 
     let img_root = env::var("RAW_IMG_ROOT")?;
 
-    let mut it = 0u32;
     let mut total = 0u32;
     for id in id_list {
         let Some(idx) = img_ex_list.iter().position(|img| img.mal_id == id) else {
@@ -74,8 +73,7 @@ async fn img_ex(
             };
 
             total += 1;
-            it += 1;
-            info!("iteration {it} {total}/{list_total}"); 
+            info!("{total}/{list_total}"); 
             
             time::sleep(interval).await;
         }

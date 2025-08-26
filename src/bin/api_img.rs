@@ -23,7 +23,7 @@ async fn img(
 ) -> anyhow::Result<()> {
     let db = mongo_client.database(&env::var("API_SRC_DB")?);
     let colle = db.collection::<ImgSrc>(&env::var("API_SRC_CL")?);
-    
+
     info!("obtaining documents...");
     let img_list = colle.find(doc! {}).await?.try_collect::<Vec<ImgSrc>>().await?;
     let list_total = img_list.len();
@@ -33,7 +33,6 @@ async fn img(
 
     let img_root = env::var("RAW_IMG_ROOT")?;
 
-    let mut it = 0u32;
     let mut total = 0u32;
     for img in img_list {
         if img.img.contains("icon") {
@@ -57,8 +56,7 @@ async fn img(
         };
 
         total += 1;
-        it += 1;
-        info!("iteration {it} {total}/{list_total}"); 
+        info!("{total}/{list_total}"); 
         
         time::sleep(interval).await;
     }
