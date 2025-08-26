@@ -13,7 +13,7 @@ use mongodb::{Client as MongoClient, bson::doc};
 use tracing::{info, warn};
 use anyhow::bail;
 
-pub trait AnimeApiRawDocument {
+pub trait ApiRawDocument {
     fn from_value_list(mal_id: i64, val: Vec<Value>) -> Self;
 }
 
@@ -117,11 +117,11 @@ pub async fn request_img(
 pub async fn request_anime_api<'de, T>(
     interval_mil: u64,
     timeout_mil: u64,
-    path: &str,
+    api_path: &str,
     mongo_client: MongoClient, 
     http_client: HttpClient
 ) -> anyhow::Result<()>
-    where T: Send + Sync + Serialize + Deserialize<'de> + AnimeApiRawDocument
+    where T: Send + Sync + Serialize + Deserialize<'de> + ApiRawDocument
 {
     let src_db = mongo_client.database(&env::var("API_SRC_DB")?);
     let src_cl = src_db.collection::<Value>(&env::var("API_SRC_CL")?);
@@ -148,7 +148,60 @@ pub async fn request_anime_api<'de, T>(
         }
 
         info!("{i}/{total}");
-        let url = format!("{base_url}/anime/{mal_id}/{path}");
+        let url = format!("{base_url}/anime/{mal_id}/{api_path}");
+        match request(&http_client, timeout, &url).await {
+            Err(e) => warn!("request failed. {e}. skipping"),
+            Ok((data, _)) => {
+                if data.is_empty() {
+                    info!("data is empty");
+                } else {
+                    let anime_document = T::from_value_list(*mal_id, data);
+                    _ = dst_cl.insert_one(anime_document).await?;
+                    info!("inserted a item");
+                }
+            }
+        }
+
+        time::sleep(interval).await;
+    }
+
+    info!("done");
+    Ok(())
+}
+
+pub async fn request_chara_api<'de, T>(
+    src_list_path: String,
+    interval_mil: u64,
+    timeout_mil: u64,
+    api_path: &str,
+    mongo_client: MongoClient, 
+    http_client: HttpClient
+) -> anyhow::Result<()>
+    where T: Send + Sync + Serialize + Deserialize<'de> + ApiRawDocument
+{
+    let json = fs::read_to_string(&src_list_path).await?;
+    let src_list = serde_json::from_str::<Vec<i64>>(&json)?;
+    
+    let dst_db = mongo_client.database(&env::var("API_DST_DB")?);
+    let dst_cl = dst_db.collection::<T>(&env::var("API_DST_CL")?);
+
+    let base_url = env::var("BASE_API_URL")?;
+
+    let interval = Duration::from_millis(interval_mil);
+    let timeout = Duration::from_millis(timeout_mil);
+
+    let done = dst_cl.distinct("mal_id", doc! {}).await?.iter()
+        .filter_map(|bson| bson.as_i64())
+        .collect::<Vec<i64>>();
+    let total = src_list.len();
+
+    for (i, mal_id) in src_list.iter().enumerate() {
+        if done.contains(mal_id) {
+            continue;
+        }
+
+        info!("{i}/{total}");
+        let url = format!("{base_url}/characters/{mal_id}/{api_path}");
         match request(&http_client, timeout, &url).await {
             Err(e) => warn!("request failed. {e}. skipping"),
             Ok((data, _)) => {

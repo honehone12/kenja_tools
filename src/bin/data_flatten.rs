@@ -209,6 +209,7 @@ async fn flatten(args: Args, mongo_client: MongoClient)
                     chara.name,
                     chara.name_kanji,
                 ));
+
                 inserted_chara_list.push(chara.mal_id);
             }
         }
@@ -227,6 +228,9 @@ async fn flatten(args: Args, mongo_client: MongoClient)
 
     let ani_list_json = serde_json::to_string(&inserted_ani_list)?;
     fs::write("inserted_anime_list.json", ani_list_json).await?;
+
+    let chara_list_json = serde_json::to_string(&inserted_chara_list)?;
+    fs::write("inserted_chara_list.json", chara_list_json).await?;
 
     info!("done");
     Ok(())

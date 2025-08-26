@@ -2,15 +2,15 @@ use std::fmt::{Display, Formatter, Result as FmtResult};
 use serde::{Serialize, Deserialize};
 use serde_json::Value;
 use clap::ValueEnum;
-use crate::api::AnimeApiRawDocument;
+use crate::api::ApiRawDocument;
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct AnimeCharacters {
+pub struct CharactersRaw {
     pub mal_id: i64,
     pub characters: Vec<Value>
 }
 
-impl AnimeApiRawDocument for AnimeCharacters {
+impl ApiRawDocument for CharactersRaw {
     fn from_value_list(mal_id: i64, val: Vec<Value>) -> Self {
         Self {
             mal_id,
@@ -20,12 +20,12 @@ impl AnimeApiRawDocument for AnimeCharacters {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct AnimeStaffs {
+pub struct StaffsRaw {
     pub mal_id: i64,
     pub staffs: Vec<Value>
 }
 
-impl AnimeApiRawDocument for AnimeStaffs {
+impl ApiRawDocument for StaffsRaw {
     fn from_value_list(mal_id: i64, val: Vec<Value>) -> Self {
         Self {
             mal_id,
@@ -35,12 +35,12 @@ impl AnimeApiRawDocument for AnimeStaffs {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct AnimeLinks {
+pub struct LinksRaw {
     pub mal_id: i64,
     pub links: Vec<Value>
 }
 
-impl AnimeApiRawDocument for AnimeLinks {
+impl ApiRawDocument for LinksRaw {
     fn from_value_list(mal_id: i64, val: Vec<Value>) -> Self {
         Self {
             mal_id,
@@ -50,12 +50,12 @@ impl AnimeApiRawDocument for AnimeLinks {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct AnimeVideos {
+pub struct VideosRaw {
     pub mal_id: i64,
     pub videos: Vec<Value>
 }
 
-impl AnimeApiRawDocument for AnimeVideos {
+impl ApiRawDocument for VideosRaw {
     fn from_value_list(mal_id: i64, val: Vec<Value>) -> Self {
         Self {
             mal_id,
@@ -65,12 +65,12 @@ impl AnimeApiRawDocument for AnimeVideos {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct AnimePictures {
+pub struct PicturesRaw {
     pub mal_id: i64,
     pub pictures: Vec<Value>
 }
 
-impl AnimeApiRawDocument for AnimePictures {
+impl ApiRawDocument for PicturesRaw {
     fn from_value_list(mal_id: i64, val: Vec<Value>) -> Self {
         Self {
             mal_id,

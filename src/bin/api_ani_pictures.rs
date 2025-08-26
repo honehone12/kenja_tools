@@ -2,7 +2,7 @@ use std::env;
 use mongodb::Client as MongoClient;
 use reqwest::Client as HttpClient;
 use clap::Parser;
-use kenja_tools::{api::request_anime_api, documents::anime_raw::AnimeStaffs};
+use kenja_tools::{api::request_anime_api, documents::anime_raw::PicturesRaw};
 
 #[derive(Parser)]
 #[command(version)]
@@ -24,10 +24,10 @@ async fn main() -> anyhow::Result<()> {
 
     let http_client = HttpClient::new();
     
-    request_anime_api::<AnimeStaffs>(
+    request_anime_api::<PicturesRaw>(
         args.interval_mil, 
         args.timeout_mil,
-        "staff",
+        "pictures",
         mongo_client, 
         http_client
     ).await

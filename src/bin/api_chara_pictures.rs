@@ -2,7 +2,7 @@ use std::env;
 use mongodb::Client as MongoClient;
 use reqwest::Client as HttpClient;
 use clap::Parser;
-use kenja_tools::{api::request_anime_api, documents::anime_raw::AnimeLinks};
+use kenja_tools::{api::request_chara_api, documents::anime_raw::PicturesRaw};
 
 #[derive(Parser)]
 #[command(version)]
@@ -10,7 +10,9 @@ struct Args {
     #[arg(long, default_value_t = 1500)]
     interval_mil: u64,
     #[arg(long, default_value_t = 10000)]
-    timeout_mil: u64
+    timeout_mil: u64,
+    #[arg(long)]
+    list: String
 }
 
 #[tokio::main]
@@ -24,10 +26,11 @@ async fn main() -> anyhow::Result<()> {
 
     let http_client = HttpClient::new();
     
-    request_anime_api::<AnimeLinks>(
+    request_chara_api::<PicturesRaw>(
+        args.list,
         args.interval_mil, 
         args.timeout_mil,
-        "external",
+        "pictures",
         mongo_client, 
         http_client
     ).await

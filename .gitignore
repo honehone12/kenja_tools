@@ -1,7 +1,4 @@
 /target
-/json
-/images
-/img
 
 .env
 Cargo.lock

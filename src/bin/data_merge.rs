@@ -18,6 +18,9 @@ async fn main() -> anyhow::Result<()> {
     let source = mongo_client.database(&source_db).collection::<Document>(&source_cl);
 
     source.aggregate(vec![
+        // if there are duplicated docs, replace will actually throw error
+        // because mongo does not automatically remove docs with _id.
+        // so remove _id first here.
         doc! {"$unset": "_id"},
         doc! {"$merge": doc! {
             "into": doc! {"db": target_db, "coll": target_cl},
