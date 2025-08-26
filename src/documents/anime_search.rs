@@ -1,5 +1,4 @@
 use std::fmt::Display;
-use mongodb::bson::oid::ObjectId;
 use serde::{Deserialize, Serialize};
 use serde_repr::{Serialize_repr, Deserialize_repr};
 use serde_with::skip_serializing_none;
@@ -29,9 +28,9 @@ impl Display for ItemType {
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Parent {
-    pub id: ObjectId,
     pub name: String,
-    pub name_japanese: Option<String>
+    pub name_japanese: Option<String>,
+    pub url: Option<String>
 }
 
 #[skip_serializing_none]
@@ -41,7 +40,6 @@ pub struct FlatDocument {
     pub updated_at: u64,
     pub item_type: ItemType,
     pub url: Option<String>,
-    pub license: Option<Vec<String>>,
     pub img: Option<String>,
     pub src: Option<String>,
     pub name: Option<String>,
@@ -55,7 +53,6 @@ impl FlatDocument {
         updated_at: u64,
         item_type: ItemType,
         url: Option<String>,
-        license: Vec<String>,
         img: String,
         src: String,
         name: String,
@@ -66,7 +63,6 @@ impl FlatDocument {
             updated_at,
             item_type,
             url,
-            license: Some(license),
             img: Some(img),
             src: Some(src),
             name: Some(name),
@@ -95,7 +91,6 @@ impl FlatDocument {
             name_japanese,
             name_english: None,
             url: None,
-            license: None
         }
     }
 
@@ -113,7 +108,6 @@ impl FlatDocument {
             src: Some(src),
             parent: Some(parent),
             url: None,
-            license: None,
             name: None,
             name_english: None,
             name_japanese: None
@@ -130,7 +124,6 @@ impl FlatDocument {
             item_type,
             parent: Some(parent),
             url: None,
-            license: None,
             img: None,
             src: None,
             name: None,

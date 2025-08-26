@@ -46,14 +46,12 @@ async fn flatten(args: Args, mongo_client: MongoClient)
 
     let src_db = mongo_client.database(&env::var("FLT_SRC_DB")?);
     let dst_db = mongo_client.database(&env::var("FLT_DST_DB")?);
-    let exist_db = mongo_client.database(&env::var("FLT_EXIST_DB")?);
 
     let ani_cl = src_db.collection::<AnimeSrc>(&env::var("FLT_SRC_ANI_CL")?);
     let ani_chara_cl = src_db.collection::<AniCharaBridge>(&env::var("FLT_SRC_ANI_CHARA_CL")?);
     let chara_cl = src_db.collection::<CharacterSrc>(&env::var("FLT_SRC_CHARA_CL")?);
     let links_cl = src_db.collection::<LinkSrc>(&env::var("FLT_SRC_LINKS_CL")?);
     
-    let exist_cl = exist_db.collection::<FlatDocument>(&env::var("FLT_EXIST_CL")?);
     let flat_cl = dst_db.collection::<FlatDocument>(&env::var("FLT_DST_CL")?);
 
     info!("obtaining data. this will take a while.");
@@ -70,10 +68,6 @@ async fn flatten(args: Args, mongo_client: MongoClient)
     let link_list = links_cl.find(doc!{}).await?
         .try_collect::<Vec<LinkSrc>>().await?;
 
-    let exist_list = exist_cl.distinct("url", doc! {}).await?.iter()
-        .filter_map(|bson| bson.as_str().map(|s| s.to_string()))
-        .collect::<Vec<String>>();
-
     let chrono_fmt = "%Y-%m-%dT%H:%M:%S%z";
     let Some(oldest) = NaiveDate::from_yo_opt(args.oldest, 1) else {
         bail!("could not find a day on the calendar");
@@ -83,10 +77,6 @@ async fn flatten(args: Args, mongo_client: MongoClient)
     let mut batch = vec![];
     let mut inserted_chara_list = vec![];
     for anime in ani_list {
-        if exist_list.contains(&anime.url) {
-            continue;
-        }
-
         match anime.aired.from {
             Some(s) => {
                 let date = NaiveDate::parse_from_str(&s, &chrono_fmt)?;
@@ -117,12 +107,6 @@ async fn flatten(args: Args, mongo_client: MongoClient)
             continue;
         }
 
-        let license = if anime.producers.is_empty() {
-            continue;
-        } else {
-            anime.producers.iter().map(|p| p.name.clone()).collect::<Vec<String>>()
-        };
-
         let url = match link_list.iter().find(|l| l.mal_id == anime.mal_id) {
             Some(l) => l.links.iter().find(|l| l.name == "Official Site")
                 .map(|l| l.url.clone()),
@@ -151,21 +135,16 @@ async fn flatten(args: Args, mongo_client: MongoClient)
 
         let updated_at = SystemTime::now().duration_since(UNIX_EPOCH)?.as_millis() as u64;
 
-        let res = flat_cl.insert_one(FlatDocument::new_anime(
+        batch.push(FlatDocument::new_anime(
             updated_at,
             ItemType::Anime,
-            url,
-            license,
+            url.clone(),
             img,
             anime.url,
             anime.title.clone(),
             anime.title_english,
             anime.title_japanese.clone(),
-        )).await?;
-
-        let Some(parent_id) = res.inserted_id.as_object_id() else {
-            bail!("inserted object id is empty")
-        };
+        ));
 
         info!("inserted a item");
 
@@ -182,10 +161,6 @@ async fn flatten(args: Args, mongo_client: MongoClient)
                 };
 
                 if inserted_chara_list.contains(&chara.mal_id) {
-                    continue;
-                }
-                
-                if exist_list.contains(&chara.url) {
                     continue;
                 }
 
@@ -225,9 +200,9 @@ async fn flatten(args: Args, mongo_client: MongoClient)
                     img,
                     chara.url,
                     Parent{
-                        id: parent_id,
                         name: anime.title.clone(),
                         name_japanese: anime.title_japanese.clone(),
+                        url: url.clone()
                     },
                     chara.name,
                     chara.name_kanji,
