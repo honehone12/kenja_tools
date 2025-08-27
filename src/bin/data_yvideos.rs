@@ -8,7 +8,7 @@ use kenja_tools::{data::insert_batch, documents::{
         anime_search::{
             FlatDocument, ItemType, Parent
         }, 
-        anime_src::{AnimeSrc, LinkSrc, VideoSrc, YVideo}
+        anime_src::{AnimeSrc, VideoSrc, YVideo}
     }};
 
 #[derive(Parser)]
@@ -32,10 +32,6 @@ async fn yvideos(args: Args, mongo_client: MongoClient) -> anyhow::Result<()> {
     let anime_list = anime_cl.find(doc! {}).await?
         .try_collect::<Vec<AnimeSrc>>().await?;
 
-    let link_cl = src_db.collection::<LinkSrc>(&env::var("DATA_SRC_LINKS_CL")?);
-    let mut link_list = link_cl.find(doc! {}).await?
-        .try_collect::<Vec<LinkSrc>>().await?;
-
     let video_cl = src_db.collection::<VideoSrc>(&env::var("DATA_SRC_VIDEOS_CL")?);
     let mut video_list = video_cl.find(doc! {}).await?
         .try_collect::<Vec<VideoSrc>>().await?;
@@ -53,18 +49,9 @@ async fn yvideos(args: Args, mongo_client: MongoClient) -> anyhow::Result<()> {
         };
         let video_src = video_list.remove(idx);
 
-        let official = match link_list.iter().position(|l| l.mal_id == anime_id) {
-            Some(idx) => {
-                link_list.remove(idx).links.iter().find(|l| l.name == "Official Site")
-                    .map(|l| l.url.clone())
-            } 
-            None => None
-        };
-
         let parent = Parent{
             name: anime.title.clone(),
-            name_japanese: anime.title_japanese.clone(),
-            url: official
+            name_japanese: anime.title_japanese.clone()
         };
 
         let updated_at = SystemTime::now().duration_since(UNIX_EPOCH)?.as_millis() as u64;

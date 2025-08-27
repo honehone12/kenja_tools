@@ -27,8 +27,7 @@ impl Display for ItemType {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Parent {
     pub name: String,
-    pub name_japanese: Option<String>,
-    pub url: Option<String>
+    pub name_japanese: Option<String>
 }
 
 #[skip_serializing_none]
@@ -37,7 +36,6 @@ pub struct FlatDocument {
     // mongodb's Date obj is unix mils
     pub updated_at: u64,
     pub item_type: ItemType,
-    pub url: Option<String>,
     pub unique: Option<String>,
     pub img: Option<String>,
     pub src: Option<String>,
@@ -51,7 +49,6 @@ impl FlatDocument {
     pub fn new_anime(
         updated_at: u64,
         item_type: ItemType,
-        url: Option<String>,
         img: String,
         src: String,
         name: String,
@@ -61,7 +58,6 @@ impl FlatDocument {
         Self {
             updated_at,
             item_type,
-            url,
             img: Some(img),
             src: Some(src),
             name: Some(name),
@@ -90,7 +86,6 @@ impl FlatDocument {
             name: Some(name),
             name_japanese,
             name_english: None,
-            url: None,
             unique: None
         }
     }
@@ -108,7 +103,6 @@ impl FlatDocument {
             img: Some(img),
             src: Some(src),
             parent: Some(parent),
-            url: None,
             unique: None,
             name: None,
             name_english: None,
@@ -127,7 +121,6 @@ impl FlatDocument {
             item_type,
             unique: Some(unique),
             parent: Some(parent),
-            url: None,
             img: None,
             src: None,
             name: None,

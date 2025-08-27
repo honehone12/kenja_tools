@@ -17,7 +17,7 @@ use kenja_tools::{
             AnimeSrc, 
             CharacterSrc, 
             ImageUrls, 
-            Images, LinkSrc
+            Images,
         }
     }
 };
@@ -53,7 +53,6 @@ async fn flatten(args: Args, mongo_client: MongoClient)
     let ani_cl = src_db.collection::<AnimeSrc>(&env::var("DATA_SRC_ANI_CL")?);
     let ani_chara_cl = src_db.collection::<AniCharaBridge>(&env::var("DATA_SRC_ANI_CHARA_CL")?);
     let chara_cl = src_db.collection::<CharacterSrc>(&env::var("DATA_SRC_CHARA_CL")?);
-    let links_cl = src_db.collection::<LinkSrc>(&env::var("DATA_SRC_LINKS_CL")?);
     
     let flat_cl = dst_db.collection::<FlatDocument>(&env::var("DATA_DST_CL")?);
 
@@ -67,9 +66,6 @@ async fn flatten(args: Args, mongo_client: MongoClient)
 
     let mut chara_list = chara_cl.find(doc! {}).await?
         .try_collect::<Vec<CharacterSrc>>().await?;
-
-    let mut link_list = links_cl.find(doc!{}).await?
-        .try_collect::<Vec<LinkSrc>>().await?;
 
     let chrono_fmt = "%Y-%m-%dT%H:%M:%S%z";
     let Some(oldest) = NaiveDate::from_yo_opt(args.oldest, 1) else {
@@ -110,14 +106,6 @@ async fn flatten(args: Args, mongo_client: MongoClient)
         if anime.synopsis.is_none_or(|s| s.is_empty()) {
             continue;
         }
-
-        let url = match link_list.iter().position(|l| l.mal_id == anime.mal_id) {
-            Some(idx) => {
-                link_list.remove(idx).links.iter().find(|l| l.name == "Official Site")
-                    .map(|l| l.url.clone())
-            } 
-            None => None
-        };
           
         let img = match anime.images {
             Some(Images{jpg: Some(ImageUrls{image_url: Some(s)})}) => {
@@ -144,7 +132,6 @@ async fn flatten(args: Args, mongo_client: MongoClient)
         batch.push(FlatDocument::new_anime(
             updated_at,
             ItemType::Anime,
-            url.clone(),
             img,
             anime.url,
             anime.title.clone(),
@@ -207,8 +194,7 @@ async fn flatten(args: Args, mongo_client: MongoClient)
                     chara.url,
                     Parent{
                         name: anime.title.clone(),
-                        name_japanese: anime.title_japanese.clone(),
-                        url: url.clone()
+                        name_japanese: anime.title_japanese.clone()
                     },
                     chara.name,
                     chara.name_kanji,
