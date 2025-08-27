@@ -9,7 +9,6 @@ pub enum ItemType {
     Unspecified = 0,
     Anime,
     Character,
-    Picture,
     YVideo
 }
 
@@ -19,7 +18,6 @@ impl Display for ItemType {
             ItemType::Unspecified => Err(std::fmt::Error),
             ItemType::Anime => write!(f, "anime"),
             ItemType::Character => write!(f, "character"),
-            ItemType::Picture => write!(f, "picture"),
             ItemType::YVideo => write!(f, "yvideo")
         }
     }
@@ -40,6 +38,7 @@ pub struct FlatDocument {
     pub updated_at: u64,
     pub item_type: ItemType,
     pub url: Option<String>,
+    pub unique: Option<String>,
     pub img: Option<String>,
     pub src: Option<String>,
     pub name: Option<String>,
@@ -68,7 +67,8 @@ impl FlatDocument {
             name: Some(name),
             name_english,
             name_japanese,
-            parent: None
+            parent: None,
+            unique: None,
         }
     } 
 
@@ -91,6 +91,7 @@ impl FlatDocument {
             name_japanese,
             name_english: None,
             url: None,
+            unique: None
         }
     }
 
@@ -108,6 +109,7 @@ impl FlatDocument {
             src: Some(src),
             parent: Some(parent),
             url: None,
+            unique: None,
             name: None,
             name_english: None,
             name_japanese: None
@@ -117,11 +119,13 @@ impl FlatDocument {
     pub fn new_yvideo(
         updated_at: u64,
         item_type: ItemType,
+        unique: String,
         parent: Parent
     ) -> Self {
         Self {
             updated_at,
             item_type,
+            unique: Some(unique),
             parent: Some(parent),
             url: None,
             img: None,

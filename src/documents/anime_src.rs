@@ -101,34 +101,30 @@ pub struct LinkSrc {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct YoutubeImages {
-    pub image_url: String
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct YoutubeVideo {
-    pub youtube_id: String,
-    pub url: String,
-    pub embed_url: String,
-    pub images: YoutubeImages 
+pub struct YVideo {
+    pub youtube_id: Option<String>
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct PromoVideo {
-    pub title: String,
-    pub trailer: YoutubeVideo
+    pub trailer: Option<YVideo>
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct MusicVideo {
-    pub title: String,
-    pub video: YoutubeVideo
+    pub video: Option<YVideo>
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct Videos {
+    pub promo: Vec<PromoVideo>,
+    pub music_videos: Vec<MusicVideo>
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct VideoSrc {
-    pub promo: Vec<PromoVideo>,
-    pub music_videos: Vec<MusicVideo>
+    pub mal_id: i64,
+    pub videos: Vec<Videos>
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]

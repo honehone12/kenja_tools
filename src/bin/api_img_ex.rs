@@ -4,7 +4,10 @@ use tokio::{fs, time};
 use mongodb::{bson::doc, Client as MongoClient};
 use reqwest::{Client as HttpClient, Url};
 use clap::Parser;
-use kenja_tools::{api::request_img, documents::anime_src::{ImageUrls, ImgExSrc}};
+use kenja_tools::{
+    api::request_img, 
+    documents::anime_src::{ImageUrls, ImgExSrc}
+};
 use tracing::{info, warn};
 
 #[derive(Parser)]
