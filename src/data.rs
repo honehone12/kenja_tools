@@ -1,7 +1,9 @@
 use std::{path::PathBuf, str::FromStr};
+use serde::{Deserialize, Serialize};
 use url::Url;
 use tokio::fs;
-use tracing::warn;
+use mongodb::Collection;
+use tracing::{info, warn};
 
 use crate::documents::anime_search::ItemType;
 
@@ -19,6 +21,17 @@ pub fn is_expected_media_type(media_type: &str) -> bool {
         "TV" | "Movie" | "OVA" | "ONA" => true,
         _ => false
     }
+}
+
+#[inline]
+pub async fn insert_batch<'de, T>(cl: &Collection<T>, batch: &mut Vec<T>) 
+-> anyhow::Result<()>
+    where T: Sync + Send + Serialize + Deserialize<'de>
+{
+    let result = cl.insert_many(&*batch).await?;
+    info!("inserted {}items", result.inserted_ids.len());
+    batch.clear();
+    Ok(())
 }
 
 pub async fn create_new_img(

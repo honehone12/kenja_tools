@@ -7,7 +7,7 @@ use mongodb::{bson::doc, Client as MongoClient};
 use tokio::fs;
 use tracing::info;
 use kenja_tools::{
-    data::{create_new_img, is_expected_media_type, is_hentai_str}, 
+    data::{create_new_img, insert_batch, is_expected_media_type, is_hentai_str}, 
     documents::{
         anime_search::{
             FlatDocument, ItemType, Parent
@@ -25,6 +25,8 @@ use kenja_tools::{
 #[derive(Parser)]
 #[command(version)]
 struct Args {
+    #[arg(long, default_value_t = 100)]
+    batch_size: usize,
     #[arg(long, default_value_t = 1965)]
     oldest: i32,
     #[arg(long, default_value_t = 10)]
@@ -45,15 +47,15 @@ async fn flatten(args: Args, mongo_client: MongoClient)
     let exist_img_root = env::var("EXIST_IMG_ROOT")?;
     let new_img_root = env::var("NEW_IMG_ROOT")?;
 
-    let src_db = mongo_client.database(&env::var("FLT_SRC_DB")?);
-    let dst_db = mongo_client.database(&env::var("FLT_DST_DB")?);
+    let src_db = mongo_client.database(&env::var("DATA_SRC_DB")?);
+    let dst_db = mongo_client.database(&env::var("DATA_DST_DB")?);
 
-    let ani_cl = src_db.collection::<AnimeSrc>(&env::var("FLT_SRC_ANI_CL")?);
-    let ani_chara_cl = src_db.collection::<AniCharaBridge>(&env::var("FLT_SRC_ANI_CHARA_CL")?);
-    let chara_cl = src_db.collection::<CharacterSrc>(&env::var("FLT_SRC_CHARA_CL")?);
-    let links_cl = src_db.collection::<LinkSrc>(&env::var("FLT_SRC_LINKS_CL")?);
+    let ani_cl = src_db.collection::<AnimeSrc>(&env::var("DATA_SRC_ANI_CL")?);
+    let ani_chara_cl = src_db.collection::<AniCharaBridge>(&env::var("DATA_SRC_ANI_CHARA_CL")?);
+    let chara_cl = src_db.collection::<CharacterSrc>(&env::var("DATA_SRC_CHARA_CL")?);
+    let links_cl = src_db.collection::<LinkSrc>(&env::var("DATA_SRC_LINKS_CL")?);
     
-    let flat_cl = dst_db.collection::<FlatDocument>(&env::var("FLT_DST_CL")?);
+    let flat_cl = dst_db.collection::<FlatDocument>(&env::var("DATA_DST_CL")?);
 
     info!("obtaining data. this will take a while.");
     let mut ani_list = ani_cl.find(doc! {}).await?
@@ -66,7 +68,7 @@ async fn flatten(args: Args, mongo_client: MongoClient)
     let mut chara_list = chara_cl.find(doc! {}).await?
         .try_collect::<Vec<CharacterSrc>>().await?;
 
-    let link_list = links_cl.find(doc!{}).await?
+    let mut link_list = links_cl.find(doc!{}).await?
         .try_collect::<Vec<LinkSrc>>().await?;
 
     let chrono_fmt = "%Y-%m-%dT%H:%M:%S%z";
@@ -109,9 +111,11 @@ async fn flatten(args: Args, mongo_client: MongoClient)
             continue;
         }
 
-        let url = match link_list.iter().find(|l| l.mal_id == anime.mal_id) {
-            Some(l) => l.links.iter().find(|l| l.name == "Official Site")
-                .map(|l| l.url.clone()),
+        let url = match link_list.iter().position(|l| l.mal_id == anime.mal_id) {
+            Some(idx) => {
+                link_list.remove(idx).links.iter().find(|l| l.name == "Official Site")
+                    .map(|l| l.url.clone())
+            } 
             None => None
         };
           
@@ -214,16 +218,13 @@ async fn flatten(args: Args, mongo_client: MongoClient)
             }
         }
 
-        if batch.len() >= 100 {
-            let result = flat_cl.insert_many(&batch).await?;
-            info!("inserted {}items", result.inserted_ids.len());
-            batch.clear();    
+        if batch.len() >= args.batch_size {
+            insert_batch(&flat_cl, &mut batch).await?    
         }
     }
     
     if !batch.is_empty() {
-        let result = flat_cl.insert_many(&batch).await?;
-        info!("inserted {}items", result.inserted_ids.len());
+        insert_batch(&flat_cl, &mut batch).await?  
     }
 
     let ani_list_json = serde_json::to_string(&inserted_ani_list)?;
