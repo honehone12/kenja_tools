@@ -4,9 +4,9 @@ use futures::TryStreamExt;
 use mongodb::{bson::doc, Client as MongoClient};
 use tokio::fs;
 use tracing::info;
-use kenja_tools::{data::insert_batch, documents::{
-    anime_search::{FlatDocument, Parent}, 
-    anime_src::{AnimeSrc, VideoSrc, YVideo}
+use kenja_tools::{data::{create_new_img, insert_batch}, documents::{
+    anime_search::{FlatDocument, ItemType}, 
+    anime_src::{AnimeSrc, ImageUrls, ImgExSrc}
 }};
 
 #[derive(Parser)]
@@ -18,7 +18,11 @@ struct Args {
     list: String
 }
 
-async fn yvideos(args: Args, mongo_client: MongoClient) -> anyhow::Result<()> {
+async fn pics(args: Args, mongo_client: MongoClient) -> anyhow::Result<()> {
+    let raw_img_root = env::var("RAW_IMG_ROOT")?;
+    let exist_img_root = env::var("EXIST_IMG_ROOT")?;
+    let new_img_root = env::var("NEW_IMG_ROOT")?;
+
     let json = fs::read_to_string(&args.list).await?;
     let src_list = serde_json::from_str::<Vec<i64>>(&json)?;
 
@@ -30,9 +34,9 @@ async fn yvideos(args: Args, mongo_client: MongoClient) -> anyhow::Result<()> {
     let anime_list = anime_cl.find(doc! {}).await?
         .try_collect::<Vec<AnimeSrc>>().await?;
 
-    let video_cl = src_db.collection::<VideoSrc>(&env::var("DATA_SRC_VIDEOS_CL")?);
-    let mut video_list = video_cl.find(doc! {}).await?
-        .try_collect::<Vec<VideoSrc>>().await?;
+    let pic_cl = src_db.collection::<ImgExSrc>(&env::var("DATA_SRC_PICS_CL")?);
+    let mut pic_list = pic_cl.find(doc! {}).await?
+        .try_collect::<Vec<ImgExSrc>>().await?;
 
     let dst_cl = dst_db.collection::<FlatDocument>(&env::var("DATA_DST_CL")?);
 
@@ -42,31 +46,37 @@ async fn yvideos(args: Args, mongo_client: MongoClient) -> anyhow::Result<()> {
             continue;
         };
 
-        let Some(idx) = video_list.iter().position(|v| v.mal_id == anime_id) else {
+        let Some(idx) = pic_list.iter().position(|v| v.mal_id == anime_id) else {
             continue;
         };
-        let video_src = video_list.remove(idx);
-
-        let parent = Parent{
-            name: anime.title.clone(),
-            name_japanese: anime.title_japanese.clone()
-        };
+        let pic_src = pic_list.remove(idx);
 
         let updated_at = SystemTime::now().duration_since(UNIX_EPOCH)?.as_millis() as u64;
 
-        for videos in video_src.videos {
-            for promo in videos.promo {
-                let unique = match promo.trailer {
-                    Some(YVideo{youtube_id: Some(u)}) => u,
-                    _ => continue 
-                };
+        for imgs in pic_src.pictures {
+            let img_url = match imgs.jpg {
+                Some(ImageUrls{image_url: Some(s)}) => s,
+                _ => continue
+            };
 
-                batch.push(FlatDocument::new_yvideo(
-                    updated_at, 
-                    unique,
-                    parent.clone(), 
-                ));
-            }
+            let Some(img) = create_new_img(
+                &raw_img_root, 
+                &exist_img_root, 
+                &new_img_root, 
+                &img_url, 
+                ItemType::Anime
+            ).await? else {
+                continue;
+            };
+
+            batch.push(FlatDocument::new_anime(
+                updated_at,
+                img,
+                anime.url.clone(),
+                anime.title.clone(),
+                anime.title_english.clone(),
+                anime.title_japanese.clone(),
+            ));
         }
 
         if batch.len() > args.batch_size {
@@ -91,7 +101,7 @@ async fn main() -> anyhow::Result<()> {
     let mongo_uri = env::var("MONGO_URI")?;
     let mongo_client = MongoClient::with_uri_str(mongo_uri).await?;
 
-    yvideos(args, mongo_client).await?;
+    pics(args, mongo_client).await?;
     
     Ok(())
 }

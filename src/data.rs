@@ -59,7 +59,7 @@ pub async fn create_new_img(
     let new_file = format!("preview/{item_type}/{hex}.jpg");
     let new_path = PathBuf::from_str(exist_img_root)?.join(&new_file);
     if fs::try_exists(new_path).await? {
-        return Ok(Some(new_file))
+        return Ok(None)
     }
     
     let new_path = PathBuf::from_str(new_img_root)?.join(&new_file);

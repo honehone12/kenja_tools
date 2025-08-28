@@ -48,7 +48,6 @@ pub struct FlatDocument {
 impl FlatDocument {
     pub fn new_anime(
         updated_at: u64,
-        item_type: ItemType,
         img: String,
         src: String,
         name: String,
@@ -57,7 +56,7 @@ impl FlatDocument {
     ) -> Self {
         Self {
             updated_at,
-            item_type,
+            item_type: ItemType::Anime,
             img: Some(img),
             src: Some(src),
             name: Some(name),
@@ -70,55 +69,33 @@ impl FlatDocument {
 
     pub fn new_character(
         updated_at: u64,
-        item_type: ItemType,
         img: String,
         src: String,
-        parent: Parent,
         name: String,
-        name_japanese: Option<String>
+        name_japanese: Option<String>,
+        parent: Parent,
     ) -> Self {
         Self{
             updated_at,
-            item_type,
+            item_type: ItemType::Character,
             img: Some(img),
             src: Some(src),
-            parent: Some(parent),
             name: Some(name),
             name_japanese,
+            parent: Some(parent),
             name_english: None,
             unique: None
         }
     }
 
-    pub fn new_image(
-        updated_at: u64,
-        item_type: ItemType,
-        img: String,
-        src: String,
-        parent: Parent
-    ) -> Self {
-        Self {
-            updated_at,
-            item_type,
-            img: Some(img),
-            src: Some(src),
-            parent: Some(parent),
-            unique: None,
-            name: None,
-            name_english: None,
-            name_japanese: None
-        }
-    }
-
     pub fn new_yvideo(
         updated_at: u64,
-        item_type: ItemType,
         unique: String,
         parent: Parent
     ) -> Self {
         Self {
             updated_at,
-            item_type,
+            item_type: ItemType::YVideo,
             unique: Some(unique),
             parent: Some(parent),
             img: None,

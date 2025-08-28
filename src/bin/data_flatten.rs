@@ -131,7 +131,6 @@ async fn flatten(args: Args, mongo_client: MongoClient)
 
         batch.push(FlatDocument::new_anime(
             updated_at,
-            ItemType::Anime,
             img,
             anime.url,
             anime.title.clone(),
@@ -189,15 +188,14 @@ async fn flatten(args: Args, mongo_client: MongoClient)
 
                 batch.push(FlatDocument::new_character(
                     updated_at,
-                    ItemType::Character,
                     img,
                     chara.url,
+                    chara.name,
+                    chara.name_kanji,
                     Parent{
                         name: anime.title.clone(),
                         name_japanese: anime.title_japanese.clone()
-                    },
-                    chara.name,
-                    chara.name_kanji,
+                    }
                 ));
 
                 inserted_chara_list.push(chara.mal_id);
