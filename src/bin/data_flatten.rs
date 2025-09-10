@@ -10,14 +10,10 @@ use kenja_tools::{
     data::{create_new_img, insert_batch, is_expected_media_type, is_hentai_str}, 
     documents::{
         anime_search::{
-            FlatDocument, ItemType, Parent
+            FlatDocument, ItemType, OfficialSiteDocument, Parent
         }, 
         anime_src::{
-            AniCharaBridge, 
-            AnimeSrc, 
-            CharacterSrc, 
-            ImageUrls, 
-            Images,
+            AniCharaBridge, AnimeSrc, CharacterSrc, ImageUrls, Images, LinkSrc,
         }
     }
 };
@@ -53,19 +49,18 @@ async fn flatten(args: Args, mongo_client: MongoClient)
     let ani_cl = src_db.collection::<AnimeSrc>(&env::var("DATA_SRC_ANI_CL")?);
     let ani_chara_cl = src_db.collection::<AniCharaBridge>(&env::var("DATA_SRC_ANI_CHARA_CL")?);
     let chara_cl = src_db.collection::<CharacterSrc>(&env::var("DATA_SRC_CHARA_CL")?);
-    
+    let links_cl = src_db.collection::<LinkSrc>(&env::var("DATA_SRC_LINKS_CL")?);
+
     let flat_cl = dst_db.collection::<FlatDocument>(&env::var("DATA_DST_CL")?);
+    let official_cl = dst_db.collection::<OfficialSiteDocument>(&env::var("DATA_DST_OFFICIAL_CL")?);
 
     info!("obtaining data. this will take a while.");
-    let mut ani_list = ani_cl.find(doc! {}).await?
-        .try_collect::<Vec<AnimeSrc>>().await?;
+    let mut ani_list = ani_cl.find(doc! {}).await?.try_collect::<Vec<AnimeSrc>>().await?;
     ani_list.sort_unstable_by_key(|d| d.mal_id);
     
-    let mut ani_chara_list = ani_chara_cl.find(doc! {}).await?
-        .try_collect::<Vec<AniCharaBridge>>().await?;
-
-    let mut chara_list = chara_cl.find(doc! {}).await?
-        .try_collect::<Vec<CharacterSrc>>().await?;
+    let mut ani_chara_list = ani_chara_cl.find(doc! {}).await?.try_collect::<Vec<AniCharaBridge>>().await?;
+    let mut chara_list = chara_cl.find(doc! {}).await?.try_collect::<Vec<CharacterSrc>>().await?;
+    let mut links_list = links_cl.find(doc! {}).await?.try_collect::<Vec<LinkSrc>>().await?;
 
     let chrono_fmt = "%Y-%m-%dT%H:%M:%S%z";
     let Some(oldest) = NaiveDate::from_yo_opt(args.oldest, 1) else {
@@ -74,6 +69,7 @@ async fn flatten(args: Args, mongo_client: MongoClient)
 
     info!("start flattening");
     let mut batch = vec![];
+    let mut official_batch = vec![];
     let mut inserted_chara_list = vec![];
     let mut inserted_ani_list = vec![];
     for anime in ani_list {
@@ -125,7 +121,21 @@ async fn flatten(args: Args, mongo_client: MongoClient)
                 }
             }
             _ => continue
-        }; 
+        };
+
+        let official = match links_list.iter().position(|l| l.mal_id == anime.mal_id) {
+            Some(idx) => {
+                let mut links = links_list.remove(idx);
+                match links.links.iter().position(|l| l.name == "Official Site") {
+                    Some(idx) => {
+                        let link = links.links.remove(idx);
+                        Some(link.url)
+                    }
+                    None => None
+                }
+            }
+            None => None
+        };
 
         let updated_at = SystemTime::now().duration_since(UNIX_EPOCH)?.as_millis() as u64;
 
@@ -138,16 +148,23 @@ async fn flatten(args: Args, mongo_client: MongoClient)
             anime.title_japanese.clone(),
         ));
 
+        if let Some(url) = official {
+            official_batch.push(OfficialSiteDocument{
+                mal_id: anime.mal_id,
+                url,
+                parent: Parent{
+                    name: anime.title.clone(),
+                    name_japanese: anime.title_japanese.clone()
+                },
+            });
+        }
+
         inserted_ani_list.push(anime.mal_id);
 
-        if let Some(idx) = ani_chara_list.iter_mut()
-            .position(|b| b.mal_id == anime.mal_id)
-        {
+        if let Some(idx) = ani_chara_list.iter().position(|b| b.mal_id == anime.mal_id) {
             let bridge = ani_chara_list.remove(idx);
             for cc in bridge.characters {
-                let chara = match chara_list.iter_mut()
-                    .position(|c| c.mal_id == cc.character.mal_id) 
-                {
+                let chara = match chara_list.iter().position(|c| c.mal_id == cc.character.mal_id) {
                     Some(idx) => chara_list.remove(idx),
                     None => continue
                 };
@@ -205,10 +222,16 @@ async fn flatten(args: Args, mongo_client: MongoClient)
         if batch.len() >= args.batch_size {
             insert_batch(&flat_cl, &mut batch).await?    
         }
+        if official_batch.len() >= args.batch_size {
+            insert_batch(&official_cl, &mut official_batch).await?    
+        }
     }
     
     if !batch.is_empty() {
         insert_batch(&flat_cl, &mut batch).await?  
+    }
+    if !official_batch.is_empty() {
+        insert_batch(&official_cl, &mut official_batch).await?  
     }
 
     let ani_list_json = serde_json::to_string(&inserted_ani_list)?;

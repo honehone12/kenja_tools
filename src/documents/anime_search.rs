@@ -106,3 +106,10 @@ impl FlatDocument {
         }
     } 
 }
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct OfficialSiteDocument {
+    pub mal_id: i64,
+    pub url: String,
+    pub parent: Parent
+}
