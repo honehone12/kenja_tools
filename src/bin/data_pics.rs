@@ -4,10 +4,13 @@ use futures::TryStreamExt;
 use mongodb::{bson::doc, Client as MongoClient};
 use tokio::fs;
 use tracing::info;
-use kenja_tools::{data::{create_new_img, insert_batch}, documents::{
-    anime_search::{FlatDocument, ItemType}, 
-    anime_src::{AnimeSrc, ImageUrls, ImgExSrc}
-}};
+use kenja_tools::{
+    data::{ImgRoots, create_new_img, insert_batch}, 
+    documents::{
+        anime_search::{FlatDocument, ItemType}, 
+        anime_src::{AnimeSrc, ImageUrls, ImgExSrc}
+    }
+};
 
 #[derive(Parser)]
 #[command(version)]
@@ -19,10 +22,6 @@ struct Args {
 }
 
 async fn pics(args: Args, mongo_client: MongoClient) -> anyhow::Result<()> {
-    let raw_img_root = env::var("RAW_IMG_ROOT")?;
-    let exist_img_root = env::var("EXIST_IMG_ROOT")?;
-    let new_img_root = env::var("NEW_IMG_ROOT")?;
-
     let json = fs::read_to_string(&args.list).await?;
     let src_list = serde_json::from_str::<Vec<i64>>(&json)?;
 
@@ -31,14 +30,18 @@ async fn pics(args: Args, mongo_client: MongoClient) -> anyhow::Result<()> {
 
     info!("obtaining data. this will take a while.");
     let anime_cl = src_db.collection::<AnimeSrc>(&env::var("DATA_SRC_ANI_CL")?);
-    let anime_list = anime_cl.find(doc! {}).await?
-        .try_collect::<Vec<AnimeSrc>>().await?;
+    let anime_list = anime_cl.find(doc! {}).await?.try_collect::<Vec<AnimeSrc>>().await?;
 
     let pic_cl = src_db.collection::<ImgExSrc>(&env::var("DATA_SRC_PICS_CL")?);
-    let mut pic_list = pic_cl.find(doc! {}).await?
-        .try_collect::<Vec<ImgExSrc>>().await?;
+    let mut pic_list = pic_cl.find(doc! {}).await?.try_collect::<Vec<ImgExSrc>>().await?;
 
     let dst_cl = dst_db.collection::<FlatDocument>(&env::var("DATA_DST_CL")?);
+
+    let img_roots = ImgRoots{
+        raw_img_root: &env::var("RAW_IMG_ROOT")?,
+        exist_img_root: &env::var("EXIST_IMG_ROOT")?,
+        new_img_root: &env::var("NEW_IMG_ROOT")?,
+    };
 
     let mut batch = vec![];
     for anime_id in src_list {
@@ -59,13 +62,7 @@ async fn pics(args: Args, mongo_client: MongoClient) -> anyhow::Result<()> {
                 _ => continue
             };
 
-            let Some(img) = create_new_img(
-                &raw_img_root, 
-                &exist_img_root, 
-                &new_img_root, 
-                &img_url, 
-                ItemType::Anime
-            ).await? else {
+            let Some(img) = create_new_img(&img_roots, &img_url, ItemType::Anime).await? else {
                 continue;
             };
 

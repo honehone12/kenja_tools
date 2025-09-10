@@ -7,7 +7,10 @@ use mongodb::{bson::doc, Client as MongoClient};
 use tokio::fs;
 use tracing::info;
 use kenja_tools::{
-    data::{create_new_img, insert_batch, is_expected_media_type, is_hentai_str}, 
+    data::{
+        ImgRoots, create_new_img, 
+        insert_batch, is_expected_media_type, is_hentai_str
+    }, 
     documents::{
         anime_search::{
             FlatDocument, ItemType, OfficialSiteDocument, Parent
@@ -37,12 +40,60 @@ struct Args {
     new_img: bool
 }
 
+fn is_expexted_anime(
+    anime: &AnimeSrc,
+    oldest: NaiveDate,
+    likes: (u64, u64)
+) -> bool {
+    match &anime.aired.from {
+        Some(s) => {
+            let Ok(date) = NaiveDate::parse_from_str(&s, "%Y-%m-%dT%H:%M:%S%z") else {
+                return false;
+            };
+            if date < oldest {
+                return false;
+            }
+        }
+        None => return false
+    };
+
+    match &anime.media_type {
+        Some(s) if is_expected_media_type(&s) => (), 
+        _ => return false
+    };
+
+    match &anime.rating {
+        Some(s) if !is_hentai_str(&s) => (),
+        _ => return false
+    }
+
+    if anime.favorites < likes.0 || anime.favorites > likes.1 {
+        return false;
+    }
+
+    match &anime.synopsis {
+        Some(s) if !s.is_empty() => (),
+        _ => return false
+    }
+
+    true
+}
+
+fn is_expexted_chara(chara: &CharacterSrc, likes: (u64, u64)) -> bool {
+    if chara.favorites < likes.0 || chara.favorites > likes.1 {
+        return false;    
+    }
+
+    match &chara.about {
+        Some(s) if !s.is_empty() => (),
+        _ => return false
+    }
+
+    true
+}
+
 async fn flatten(args: Args, mongo_client: MongoClient) 
 -> anyhow::Result<()> {
-    let raw_img_root = env::var("RAW_IMG_ROOT")?;
-    let exist_img_root = env::var("EXIST_IMG_ROOT")?;
-    let new_img_root = env::var("NEW_IMG_ROOT")?;
-
     let src_db = mongo_client.database(&env::var("DATA_SRC_DB")?);
     let dst_db = mongo_client.database(&env::var("DATA_DST_DB")?);
 
@@ -62,9 +113,15 @@ async fn flatten(args: Args, mongo_client: MongoClient)
     let mut chara_list = chara_cl.find(doc! {}).await?.try_collect::<Vec<CharacterSrc>>().await?;
     let mut links_list = links_cl.find(doc! {}).await?.try_collect::<Vec<LinkSrc>>().await?;
 
-    let chrono_fmt = "%Y-%m-%dT%H:%M:%S%z";
     let Some(oldest) = NaiveDate::from_yo_opt(args.oldest, 1) else {
         bail!("could not find a day on the calendar");
+    };
+    let anime_likes = (args.min_anime_likes, args.max_anime_likes);
+    let chara_likes = (args.min_chara_likes, args.max_chara_likes);
+    let img_roots = ImgRoots{
+        raw_img_root: &env::var("RAW_IMG_ROOT")?,
+        exist_img_root: &env::var("EXIST_IMG_ROOT")?,
+        new_img_root: &env::var("NEW_IMG_ROOT")?,
     };
 
     info!("start flattening");
@@ -73,46 +130,17 @@ async fn flatten(args: Args, mongo_client: MongoClient)
     let mut inserted_chara_list = vec![];
     let mut inserted_ani_list = vec![];
     for anime in ani_list {
-        match anime.aired.from {
-            Some(s) => {
-                let date = NaiveDate::parse_from_str(&s, &chrono_fmt)?;
-                if date < oldest {
-                    continue;
-                }
-            }
-            None => continue
-        };
-
-        match anime.media_type {
-            Some(s) if is_expected_media_type(&s) => (), 
-            _ => continue
-        };
-
-        match anime.rating {
-            Some(s) if !is_hentai_str(&s) => (),
-            _ => continue
-        }
-
-        if anime.favorites < args.min_anime_likes 
-            || anime.favorites > args.max_anime_likes 
-        {
+        if inserted_ani_list.contains(&anime.mal_id) {
             continue;
         }
-
-        if anime.synopsis.is_none_or(|s| s.is_empty()) {
+        if !is_expexted_anime(&anime, oldest, anime_likes) {
             continue;
         }
           
         let img = match anime.images {
             Some(Images{jpg: Some(ImageUrls{image_url: Some(s)})}) => {
                 if args.new_img {
-                    match create_new_img(
-                        &raw_img_root,
-                        &exist_img_root, 
-                        &new_img_root,
-                        &s,
-                        ItemType::Anime
-                    ).await? {
+                    match create_new_img(&img_roots, &s, ItemType::Anime).await? {
                         Some(s) => s,
                         None => continue
                     }
@@ -172,27 +200,14 @@ async fn flatten(args: Args, mongo_client: MongoClient)
                 if inserted_chara_list.contains(&chara.mal_id) {
                     continue;
                 }
-
-                if chara.favorites < args.min_chara_likes 
-                    || chara.favorites > args.max_chara_likes 
-                {
-                    continue;    
-                }
-
-                if chara.about.is_none_or(|a| a.is_empty()) {
+                if !is_expexted_chara(&chara, chara_likes) {
                     continue;
-                } 
+                }
 
                 let img = match chara.images {
                     Some(Images{jpg: Some(ImageUrls{image_url: Some(s)})}) => {
                         if args.new_img {
-                            match create_new_img(
-                                &raw_img_root,
-                                &exist_img_root, 
-                                &new_img_root,
-                                &s,
-                                ItemType::Character
-                            ).await? {
+                            match create_new_img(&img_roots, &s, ItemType::Character).await? {
                                 Some(s) => s,
                                 None => continue
                             }

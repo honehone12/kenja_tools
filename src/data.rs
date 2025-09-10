@@ -4,11 +4,16 @@ use url::Url;
 use tokio::fs;
 use mongodb::Collection;
 use tracing::{info, warn};
-
 use crate::documents::anime_search::ItemType;
 
 const RX: &'static str = "Rx";
 const HENTAI: &'static str = "Hentai";
+
+pub struct ImgRoots<'a> {
+    pub raw_img_root: &'a str,
+    pub exist_img_root: &'a str, 
+    pub new_img_root: &'a str,
+}
 
 #[inline]
 pub fn is_hentai_str(rating_str: &str) -> bool {
@@ -35,9 +40,7 @@ pub async fn insert_batch<'de, T>(cl: &Collection<T>, batch: &mut Vec<T>)
 }
 
 pub async fn create_new_img(
-    raw_img_root: &str,
-    exist_img_root: &str, 
-    new_img_root: &str,
+    img_roots: &ImgRoots<'_>,
     img_url: &str,
     item_type: ItemType
 ) -> anyhow::Result<Option<String>> {
@@ -45,7 +48,7 @@ pub async fn create_new_img(
     let u = Url::parse(img_url)?;
     let mut p = u.path().to_string();
     p.remove(0);
-    let path = PathBuf::from_str(raw_img_root)?.join(p);
+    let path = PathBuf::from_str(img_roots.raw_img_root)?.join(p);
 
     if !fs::try_exists(&path).await? {
         warn!("file {path:?} does not exits");
@@ -57,12 +60,12 @@ pub async fn create_new_img(
     let hex = hex::encode(&hash[..16]);
 
     let new_file = format!("preview/{item_type}/{hex}.jpg");
-    let new_path = PathBuf::from_str(exist_img_root)?.join(&new_file);
+    let new_path = PathBuf::from_str(img_roots.exist_img_root)?.join(&new_file);
     if fs::try_exists(new_path).await? {
         return Ok(None)
     }
     
-    let new_path = PathBuf::from_str(new_img_root)?.join(&new_file);
+    let new_path = PathBuf::from_str(img_roots.new_img_root)?.join(&new_file);
     fs::copy(path, new_path).await?;
 
     Ok(Some(new_file))
