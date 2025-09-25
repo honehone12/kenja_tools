@@ -1,7 +1,7 @@
-use std::fmt::Display;
 use serde::{Deserialize, Serialize};
-use serde_repr::{Serialize_repr, Deserialize_repr};
+use serde_repr::{Deserialize_repr, Serialize_repr};
 use serde_with::skip_serializing_none;
+use std::fmt::Display;
 
 #[derive(Serialize_repr, Deserialize_repr, PartialEq, Eq, Clone, Copy, Debug)]
 #[repr(i32)]
@@ -9,7 +9,7 @@ pub enum ItemType {
     Unspecified = 0,
     Anime,
     Character,
-    YVideo
+    YVideo,
 }
 
 impl Display for ItemType {
@@ -18,7 +18,7 @@ impl Display for ItemType {
             ItemType::Unspecified => Err(std::fmt::Error),
             ItemType::Anime => write!(f, "anime"),
             ItemType::Character => write!(f, "character"),
-            ItemType::YVideo => write!(f, "yvideo")
+            ItemType::YVideo => write!(f, "yvideo"),
         }
     }
 }
@@ -27,7 +27,7 @@ impl Display for ItemType {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Parent {
     pub name: String,
-    pub name_japanese: Option<String>
+    pub name_japanese: Option<String>,
 }
 
 #[skip_serializing_none]
@@ -52,7 +52,7 @@ impl FlatDocument {
         src: String,
         name: String,
         name_english: Option<String>,
-        name_japanese: Option<String>
+        name_japanese: Option<String>,
     ) -> Self {
         Self {
             updated_at,
@@ -65,7 +65,7 @@ impl FlatDocument {
             parent: None,
             unique: None,
         }
-    } 
+    }
 
     pub fn new_character(
         updated_at: u64,
@@ -75,7 +75,7 @@ impl FlatDocument {
         name_japanese: Option<String>,
         parent: Parent,
     ) -> Self {
-        Self{
+        Self {
             updated_at,
             item_type: ItemType::Character,
             img: Some(img),
@@ -84,15 +84,11 @@ impl FlatDocument {
             name_japanese,
             parent: Some(parent),
             name_english: None,
-            unique: None
+            unique: None,
         }
     }
 
-    pub fn new_yvideo(
-        updated_at: u64,
-        unique: String,
-        parent: Parent
-    ) -> Self {
+    pub fn new_yvideo(updated_at: u64, unique: String, parent: Parent) -> Self {
         Self {
             updated_at,
             item_type: ItemType::YVideo,
@@ -102,14 +98,7 @@ impl FlatDocument {
             src: None,
             name: None,
             name_english: None,
-            name_japanese: None
+            name_japanese: None,
         }
-    } 
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct OfficialSiteDocument {
-    pub mal_id: i64,
-    pub url: String,
-    pub parent: Parent
+    }
 }
