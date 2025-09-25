@@ -75,6 +75,7 @@ async fn pics(args: Args, mongo_client: MongoClient) -> anyhow::Result<()> {
             };
 
             let Some(img) = create_new_img(&img_roots, &img_url, ItemType::Anime).await? else {
+                // this None means item already exists, skipping
                 continue;
             };
 
