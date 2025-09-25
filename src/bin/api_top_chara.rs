@@ -1,11 +1,11 @@
-use std::{env, time::Duration};
-use tokio::time;
+use clap::Parser;
+use kenja_tools::api::{paged_url, request};
 use mongodb::Client as MongoClient;
 use reqwest::Client as HttpClient;
-use clap::Parser;
 use serde_json::Value;
+use std::{env, time::Duration};
+use tokio::time;
 use tracing::info;
-use kenja_tools::api::{paged_url, request};
 
 #[derive(Parser)]
 #[command(version)]
@@ -13,18 +13,17 @@ struct Args {
     #[arg(long, default_value_t = 1500)]
     interval_mil: u64,
     #[arg(long, default_value_t = 10000)]
-    timeout_mil: u64
+    timeout_mil: u64,
 }
 
 async fn req_top_chara(
     args: Args,
     mongo_client: MongoClient,
-    http_client: HttpClient
+    http_client: HttpClient,
 ) -> anyhow::Result<()> {
-    
     let db = mongo_client.database(&env::var("POOL_DB")?);
     let collection = db.collection::<Value>(&env::var("CHARA_CL")?);
-    
+
     let base_url = env::var("BASE_URL")?;
 
     let interval = Duration::from_millis(args.interval_mil);

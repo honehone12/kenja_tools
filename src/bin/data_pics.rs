@@ -1,16 +1,20 @@
-use std::{env, time::{SystemTime, UNIX_EPOCH}, vec};
 use clap::Parser;
 use futures::TryStreamExt;
+use kenja_tools::{
+    data::{create_new_img, insert_batch, ImgRoots},
+    documents::{
+        anime_search::{FlatDocument, ItemType},
+        anime_src::{AnimeSrc, ImageUrls, ImgExSrc},
+    },
+};
 use mongodb::{bson::doc, Client as MongoClient};
+use std::{
+    env,
+    time::{SystemTime, UNIX_EPOCH},
+    vec,
+};
 use tokio::fs;
 use tracing::info;
-use kenja_tools::{
-    data::{ImgRoots, create_new_img, insert_batch}, 
-    documents::{
-        anime_search::{FlatDocument, ItemType}, 
-        anime_src::{AnimeSrc, ImageUrls, ImgExSrc}
-    }
-};
 
 #[derive(Parser)]
 #[command(version)]
@@ -18,7 +22,7 @@ struct Args {
     #[arg(long, default_value_t = 100)]
     batch_size: usize,
     #[arg(long)]
-    list: String
+    list: String,
 }
 
 async fn pics(args: Args, mongo_client: MongoClient) -> anyhow::Result<()> {
@@ -30,14 +34,22 @@ async fn pics(args: Args, mongo_client: MongoClient) -> anyhow::Result<()> {
 
     info!("obtaining data. this will take a while.");
     let anime_cl = src_db.collection::<AnimeSrc>(&env::var("DATA_SRC_ANI_CL")?);
-    let anime_list = anime_cl.find(doc! {}).await?.try_collect::<Vec<AnimeSrc>>().await?;
+    let anime_list = anime_cl
+        .find(doc! {})
+        .await?
+        .try_collect::<Vec<AnimeSrc>>()
+        .await?;
 
     let pic_cl = src_db.collection::<ImgExSrc>(&env::var("DATA_SRC_PICS_CL")?);
-    let mut pic_list = pic_cl.find(doc! {}).await?.try_collect::<Vec<ImgExSrc>>().await?;
+    let mut pic_list = pic_cl
+        .find(doc! {})
+        .await?
+        .try_collect::<Vec<ImgExSrc>>()
+        .await?;
 
     let dst_cl = dst_db.collection::<FlatDocument>(&env::var("DATA_DST_CL")?);
 
-    let img_roots = ImgRoots{
+    let img_roots = ImgRoots {
         raw_img_root: &env::var("RAW_IMG_ROOT")?,
         exist_img_root: &env::var("EXIST_IMG_ROOT")?,
         new_img_root: &env::var("NEW_IMG_ROOT")?,
@@ -58,8 +70,8 @@ async fn pics(args: Args, mongo_client: MongoClient) -> anyhow::Result<()> {
 
         for imgs in pic_src.pictures {
             let img_url = match imgs.jpg {
-                Some(ImageUrls{image_url: Some(s)}) => s,
-                _ => continue
+                Some(ImageUrls { image_url: Some(s) }) => s,
+                _ => continue,
             };
 
             let Some(img) = create_new_img(&img_roots, &img_url, ItemType::Anime).await? else {
@@ -99,6 +111,6 @@ async fn main() -> anyhow::Result<()> {
     let mongo_client = MongoClient::with_uri_str(mongo_uri).await?;
 
     pics(args, mongo_client).await?;
-    
+
     Ok(())
 }

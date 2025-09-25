@@ -1,28 +1,26 @@
-use std::{
-    env, 
-    path::PathBuf, 
-    str::FromStr, 
-    time::Duration
-};
-use futures::TryStreamExt;
-use serde::{Deserialize, Serialize};
-use tokio::{fs, io::{AsyncWriteExt, BufWriter}, time};
-use serde_json::Value;
-use reqwest::{Client as HttpClient, StatusCode};
-use mongodb::{Client as MongoClient, bson::doc};
-use tracing::{info, warn};
 use anyhow::bail;
+use futures::TryStreamExt;
+use mongodb::{bson::doc, Client as MongoClient};
+use reqwest::{Client as HttpClient, StatusCode};
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
+use std::{env, path::PathBuf, str::FromStr, time::Duration};
+use tokio::{
+    fs,
+    io::{AsyncWriteExt, BufWriter},
+    time,
+};
+use tracing::{info, warn};
 
 pub trait ApiRawDocument {
     fn from_value_list(mal_id: i64, val: Vec<Value>) -> Self;
 }
 
 pub async fn request(
-    http_client: &HttpClient, 
+    http_client: &HttpClient,
     timeout: Duration,
-    url: &str
-) 
--> anyhow::Result<(Vec<Value>, Value)> {
+    url: &str,
+) -> anyhow::Result<(Vec<Value>, Value)> {
     info!("requesting {url}");
     let res = http_client.get(url).timeout(timeout).send().await?;
     let status = res.status();
@@ -52,7 +50,7 @@ pub async fn request(
 pub fn paged_url(url: &str, page: u32) -> String {
     match page {
         0..=1 => url.to_string(),
-        _ => format!("{url}?page={page}")
+        _ => format!("{url}?page={page}"),
     }
 }
 
@@ -60,14 +58,14 @@ pub async fn request_pages(
     http_client: &HttpClient,
     interval: Duration,
     timeout: Duration,
-    url: &str
+    url: &str,
 ) -> anyhow::Result<Vec<Value>> {
     let mut list = vec![];
     let mut page = 0;
 
     loop {
         page += 1;
-        
+
         let url = paged_url(url, page);
         let (mut data, pagination) = request(http_client, timeout, &url).await?;
         list.append(&mut data);
@@ -91,7 +89,7 @@ pub async fn request_img(
     info!("requesting {url}");
 
     let res = http_client.get(url).timeout(timeout).send().await?;
-    let st = res.status(); 
+    let st = res.status();
     if st != StatusCode::OK {
         bail!("failed to request img with status: {st}");
     }
@@ -104,7 +102,7 @@ pub async fn request_img(
     let file = fs::File::create(&file_name).await?;
     let mut write_stream = BufWriter::new(file);
     let mut read_stream = res.bytes_stream();
-    
+
     while let Some(b) = read_stream.try_next().await? {
         write_stream.write(&b).await?;
     }
@@ -118,14 +116,15 @@ pub async fn request_anime_api<'de, T>(
     interval_mil: u64,
     timeout_mil: u64,
     api_path: &str,
-    mongo_client: MongoClient, 
-    http_client: HttpClient
+    mongo_client: MongoClient,
+    http_client: HttpClient,
 ) -> anyhow::Result<()>
-    where T: Send + Sync + Serialize + Deserialize<'de> + ApiRawDocument
+where
+    T: Send + Sync + Serialize + Deserialize<'de> + ApiRawDocument,
 {
     let src_db = mongo_client.database(&env::var("API_SRC_DB")?);
     let src_cl = src_db.collection::<Value>(&env::var("API_SRC_CL")?);
-    
+
     let dst_db = mongo_client.database(&env::var("API_DST_DB")?);
     let dst_cl = dst_db.collection::<T>(&env::var("API_DST_CL")?);
 
@@ -134,10 +133,16 @@ pub async fn request_anime_api<'de, T>(
     let interval = Duration::from_millis(interval_mil);
     let timeout = Duration::from_millis(timeout_mil);
 
-    let done = dst_cl.distinct("mal_id", doc! {}).await?.iter()
+    let done = dst_cl
+        .distinct("mal_id", doc! {})
+        .await?
+        .iter()
         .filter_map(|bson| bson.as_i64())
         .collect::<Vec<i64>>();
-    let list = src_cl.distinct("mal_id", doc! {}).await?.iter()
+    let list = src_cl
+        .distinct("mal_id", doc! {})
+        .await?
+        .iter()
         .filter_map(|bson| bson.as_i64())
         .collect::<Vec<i64>>();
     let total = list.len();
@@ -174,14 +179,15 @@ pub async fn request_chara_api<'de, T>(
     interval_mil: u64,
     timeout_mil: u64,
     api_path: &str,
-    mongo_client: MongoClient, 
-    http_client: HttpClient
+    mongo_client: MongoClient,
+    http_client: HttpClient,
 ) -> anyhow::Result<()>
-    where T: Send + Sync + Serialize + Deserialize<'de> + ApiRawDocument
+where
+    T: Send + Sync + Serialize + Deserialize<'de> + ApiRawDocument,
 {
     let json = fs::read_to_string(&src_list_path).await?;
     let src_list = serde_json::from_str::<Vec<i64>>(&json)?;
-    
+
     let dst_db = mongo_client.database(&env::var("API_DST_DB")?);
     let dst_cl = dst_db.collection::<T>(&env::var("API_DST_CL")?);
 
@@ -190,7 +196,10 @@ pub async fn request_chara_api<'de, T>(
     let interval = Duration::from_millis(interval_mil);
     let timeout = Duration::from_millis(timeout_mil);
 
-    let done = dst_cl.distinct("mal_id", doc! {}).await?.iter()
+    let done = dst_cl
+        .distinct("mal_id", doc! {})
+        .await?
+        .iter()
         .filter_map(|bson| bson.as_i64())
         .collect::<Vec<i64>>();
     let total = src_list.len();

@@ -1,20 +1,20 @@
-use std::fmt::{Display, Formatter, Result as FmtResult};
-use serde::{Serialize, Deserialize};
-use serde_json::Value;
-use clap::ValueEnum;
 use crate::api::ApiRawDocument;
+use clap::ValueEnum;
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
+use std::fmt::{Display, Formatter, Result as FmtResult};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct CharactersRaw {
     pub mal_id: i64,
-    pub characters: Vec<Value>
+    pub characters: Vec<Value>,
 }
 
 impl ApiRawDocument for CharactersRaw {
     fn from_value_list(mal_id: i64, val: Vec<Value>) -> Self {
         Self {
             mal_id,
-            characters: val
+            characters: val,
         }
     }
 }
@@ -22,14 +22,14 @@ impl ApiRawDocument for CharactersRaw {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct StaffsRaw {
     pub mal_id: i64,
-    pub staffs: Vec<Value>
+    pub staffs: Vec<Value>,
 }
 
 impl ApiRawDocument for StaffsRaw {
     fn from_value_list(mal_id: i64, val: Vec<Value>) -> Self {
         Self {
             mal_id,
-            staffs: val
+            staffs: val,
         }
     }
 }
@@ -37,29 +37,26 @@ impl ApiRawDocument for StaffsRaw {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct LinksRaw {
     pub mal_id: i64,
-    pub links: Vec<Value>
+    pub links: Vec<Value>,
 }
 
 impl ApiRawDocument for LinksRaw {
     fn from_value_list(mal_id: i64, val: Vec<Value>) -> Self {
-        Self {
-            mal_id,
-            links: val
-        }
+        Self { mal_id, links: val }
     }
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct VideosRaw {
     pub mal_id: i64,
-    pub videos: Vec<Value>
+    pub videos: Vec<Value>,
 }
 
 impl ApiRawDocument for VideosRaw {
     fn from_value_list(mal_id: i64, val: Vec<Value>) -> Self {
         Self {
             mal_id,
-            videos: val
+            videos: val,
         }
     }
 }
@@ -67,14 +64,14 @@ impl ApiRawDocument for VideosRaw {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct PicturesRaw {
     pub mal_id: i64,
-    pub pictures: Vec<Value>
+    pub pictures: Vec<Value>,
 }
 
 impl ApiRawDocument for PicturesRaw {
     fn from_value_list(mal_id: i64, val: Vec<Value>) -> Self {
         Self {
             mal_id,
-            pictures: val
+            pictures: val,
         }
     }
 }
@@ -84,7 +81,7 @@ pub enum Season {
     Winter,
     Spring,
     Summer,
-    Fall
+    Fall,
 }
 
 impl Display for Season {

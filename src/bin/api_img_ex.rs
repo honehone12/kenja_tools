@@ -1,13 +1,13 @@
-use std::{env, time::Duration};
+use clap::Parser;
 use futures::TryStreamExt;
-use tokio::{fs, time};
+use kenja_tools::{
+    api::request_img,
+    documents::anime_src::{ImageUrls, ImgExSrc},
+};
 use mongodb::{bson::doc, Client as MongoClient};
 use reqwest::{Client as HttpClient, Url};
-use clap::Parser;
-use kenja_tools::{
-    api::request_img, 
-    documents::anime_src::{ImageUrls, ImgExSrc}
-};
+use std::{env, time::Duration};
+use tokio::{fs, time};
 use tracing::{info, warn};
 
 #[derive(Parser)]
@@ -18,28 +18,32 @@ struct Args {
     #[arg(long, default_value_t = 10000)]
     timeout_mil: u64,
     #[arg(long)]
-    list: String
+    list: String,
 }
 
 async fn img_ex(
-    args: Args, 
+    args: Args,
     mongo_client: MongoClient,
-    http_client: HttpClient
+    http_client: HttpClient,
 ) -> anyhow::Result<()> {
     let json = fs::read_to_string(&args.list).await?;
     let id_list = serde_json::from_str::<Vec<i64>>(&json)?;
-    
+
     let src_db = mongo_client.database(&env::var("API_SRC_DB")?);
     let src_cl = src_db.collection::<ImgExSrc>(&env::var("API_SRC_CL")?);
-    
+
     info!("obtaining documents...");
-    let mut img_ex_list = src_cl.find(doc! {}).await?.try_collect::<Vec<ImgExSrc>>().await?;
-    
+    let mut img_ex_list = src_cl
+        .find(doc! {})
+        .await?
+        .try_collect::<Vec<ImgExSrc>>()
+        .await?;
+
     let interval = Duration::from_millis(args.interval_mil);
     let timeout = Duration::from_millis(args.timeout_mil);
-    
+
     let img_root = env::var("RAW_IMG_ROOT")?;
-    
+
     let list_total = id_list.len();
     let mut total = 0u32;
     for id in id_list {
@@ -54,7 +58,7 @@ async fn img_ex(
         let mut inner_total = 0u32;
         for imgs in img_ex.pictures {
             let img = match imgs.jpg {
-                Some(ImageUrls{image_url: Some(s)}) => s,
+                Some(ImageUrls { image_url: Some(s) }) => s,
                 _ => {
                     inner_total += 1;
                     continue;
@@ -73,28 +77,23 @@ async fn img_ex(
                 continue;
             }
 
-            if let Err(e) = request_img(
-                &http_client, 
-                timeout,
-                &img, 
-                &file_name
-            ).await {
+            if let Err(e) = request_img(&http_client, timeout, &img, &file_name).await {
                 warn!("{e}");
             };
 
             inner_total += 1;
-            info!("{inner_total}/{inner_list_total}"); 
-            
+            info!("{inner_total}/{inner_list_total}");
+
             time::sleep(interval).await;
         }
 
         total += 1;
-        info!("{total}/{list_total}"); 
+        info!("{total}/{list_total}");
     }
 
     info!("done");
     Ok(())
-} 
+}
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {

@@ -2,24 +2,23 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct AiredPeriod {
-    pub from: Option<String>
+    pub from: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct ImageUrls {
-    pub image_url: Option<String>
+    pub image_url: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Images {
-    pub jpg: Option<ImageUrls>
+    pub jpg: Option<ImageUrls>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Producer {
-    pub name: String
+    pub name: String,
 }
-
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct AnimeSrc {
@@ -35,7 +34,7 @@ pub struct AnimeSrc {
     pub title_japanese: Option<String>,
     pub synopsis: Option<String>,
     pub producers: Vec<Producer>,
-    pub favorites: u64
+    pub favorites: u64,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -46,12 +45,12 @@ pub struct CharacterSrc {
     pub name: String,
     pub name_kanji: Option<String>,
     pub about: Option<String>,
-    pub favorites: u64
+    pub favorites: u64,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Person {
-    pub name: String
+    pub name: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -62,19 +61,19 @@ pub struct Character {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct VoiceActor {
-    pub person: Person
+    pub person: Person,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct CharacterCast {
     pub character: Character,
-    pub voice_actors: Vec<VoiceActor>
+    pub voice_actors: Vec<VoiceActor>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct AniCharaBridge {
     pub mal_id: i64,
-    pub characters: Vec<CharacterCast>
+    pub characters: Vec<CharacterCast>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -85,46 +84,46 @@ pub struct Staff {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct StaffSrc {
     pub mal_id: i64,
-    pub staffs: Vec<Staff>
+    pub staffs: Vec<Staff>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Link {
     pub name: String,
-    pub url: String
+    pub url: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct LinkSrc {
     pub mal_id: i64,
-    pub links: Vec<Link>
+    pub links: Vec<Link>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct YVideo {
-    pub youtube_id: Option<String>
+    pub youtube_id: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct PromoVideo {
-    pub trailer: Option<YVideo>
+    pub trailer: Option<YVideo>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct MusicVideo {
-    pub video: Option<YVideo>
+    pub video: Option<YVideo>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Videos {
     pub promo: Vec<PromoVideo>,
-    pub music_videos: Vec<MusicVideo>
+    pub music_videos: Vec<MusicVideo>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct VideoSrc {
     pub mal_id: i64,
-    pub videos: Vec<Videos>
+    pub videos: Vec<Videos>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -135,5 +134,5 @@ pub struct ImgSrc {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct ImgExSrc {
     pub mal_id: i64,
-    pub pictures: Vec<Images>
+    pub pictures: Vec<Images>,
 }
