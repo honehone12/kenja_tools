@@ -144,7 +144,7 @@ async fn flatten(args: Args, mongo_client: MongoClient) -> anyhow::Result<()> {
                 if args.new_img {
                     match create_new_img(&img_roots, &s, ItemType::Anime).await? {
                         Some(s) => s,
-                        // this None means item already exists
+                        // this None means item already exists, skipping
                         None => continue,
                     }
                 } else {
@@ -192,7 +192,7 @@ async fn flatten(args: Args, mongo_client: MongoClient) -> anyhow::Result<()> {
                         if args.new_img {
                             match create_new_img(&img_roots, &s, ItemType::Character).await? {
                                 Some(s) => s,
-                                // this None means item already exists
+                                // this None means item already exists, skipping
                                 None => continue,
                             }
                         } else {
