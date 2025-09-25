@@ -1,10 +1,10 @@
-use std::{env, time::Duration};
-use reqwest::Client as HttpClient;
-use mongodb::Client as MongoClient;
 use clap::Parser;
-use serde_json::Value;
-use tracing::info;
 use kenja_tools::{api::request_pages, documents::anime_raw::Season};
+use mongodb::Client as MongoClient;
+use reqwest::Client as HttpClient;
+use serde_json::Value;
+use std::{env, time::Duration};
+use tracing::info;
 
 #[derive(Parser)]
 #[command(version)]
@@ -16,16 +16,16 @@ struct Args {
     #[arg(long, default_value_t = 1500)]
     interval_mil: u64,
     #[arg(long, default_value_t = 10000)]
-    timeout_mil: u64
+    timeout_mil: u64,
 }
 
 async fn req_quarter_list(
     args: Args,
     mongo_client: MongoClient,
-    http_client: HttpClient
+    http_client: HttpClient,
 ) -> anyhow::Result<()> {
-    let db = mongo_client.database(&env::var("SEASON_DB")?);
-    let collection = db.collection::<Value>(&env::var("SEASON_ANI_CL")?);
+    let db = mongo_client.database(&env::var("API_DST_DB")?);
+    let collection = db.collection::<Value>(&env::var("API_DST_CL")?);
 
     let base_url = env::var("BASE_API_URL")?;
 
