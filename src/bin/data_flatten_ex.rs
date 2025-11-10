@@ -32,7 +32,7 @@ struct Args {
     min_anime_likes: u64,
     #[arg(long, default_value_t = u64::MAX)]
     max_anime_likes: u64,
-    #[arg(long, default_value_t = 0)]
+    #[arg(long, default_value_t = 5)]
     min_chara_likes: u64,
     #[arg(long, default_value_t = u64::MAX)]
     max_chara_likes: u64,
