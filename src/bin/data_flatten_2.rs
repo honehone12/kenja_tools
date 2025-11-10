@@ -3,7 +3,10 @@ use chrono::NaiveDate;
 use clap::Parser;
 use futures::TryStreamExt;
 use kenja_tools::{
-    data::{create_hashed_img, insert_batch, is_expected_media_type, is_hentai_str, ImgRoots},
+    data::{
+        create_hashed_img, exists_hashed_img, insert_batch, is_expected_media_type, is_hentai_str,
+        ImgRoots,
+    },
     documents::{
         anime_search::{FlatDocument, ItemType, Parent},
         anime_src::{AniCharaBridge, AnimeSrc, CharacterSrc, ImageUrls, Images},
@@ -29,7 +32,7 @@ struct Args {
     min_anime_likes: u64,
     #[arg(long, default_value_t = u64::MAX)]
     max_anime_likes: u64,
-    #[arg(long, default_value_t = 0)] // old is 5
+    #[arg(long, default_value_t = 0)]
     min_chara_likes: u64,
     #[arg(long, default_value_t = u64::MAX)]
     max_chara_likes: u64,
@@ -64,11 +67,6 @@ fn is_expexted_anime(anime: &AnimeSrc, oldest: NaiveDate, likes: (u64, u64)) -> 
         return false;
     }
 
-    // match &anime.synopsis {
-    //     Some(s) if !s.is_empty() => (),
-    //     _ => return false,
-    // }
-
     true
 }
 
@@ -76,11 +74,6 @@ fn is_expexted_chara(chara: &CharacterSrc, likes: (u64, u64)) -> bool {
     if chara.favorites < likes.0 || chara.favorites > likes.1 {
         return false;
     }
-
-    // match &chara.about {
-    //     Some(s) if !s.is_empty() => (),
-    //     _ => return false,
-    // }
 
     true
 }
@@ -137,18 +130,18 @@ async fn flatten(args: Args, mongo_client: MongoClient) -> anyhow::Result<()> {
             continue;
         }
 
-        let img = match anime.images {
+        let image = match anime.images {
             Some(Images {
                 jpg: Some(ImageUrls { image_url: Some(s) }),
             }) => {
+                // None means already exists
                 if args.new_img {
-                    match create_hashed_img(&img_roots, &s, ItemType::Anime).await? {
-                        Some(s) => s,
-                        // this None means item already exists, skipping
-                        None => continue,
-                    }
+                    create_hashed_img(&img_roots, &s, ItemType::Anime).await?
                 } else {
-                    s
+                    match exists_hashed_img(&img_roots, &s, ItemType::Anime).await? {
+                        true => None,
+                        false => Some(s),
+                    }
                 }
             }
             _ => continue,
@@ -156,16 +149,18 @@ async fn flatten(args: Args, mongo_client: MongoClient) -> anyhow::Result<()> {
 
         let updated_at = SystemTime::now().duration_since(UNIX_EPOCH)?.as_millis() as u64;
 
-        batch.push(FlatDocument::new_anime(
-            updated_at,
-            img,
-            anime.url,
-            anime.title.clone(),
-            anime.title_english,
-            anime.title_japanese.clone(),
-        ));
+        if let Some(img) = image {
+            batch.push(FlatDocument::new_anime(
+                updated_at,
+                img,
+                anime.url,
+                anime.title.clone(),
+                anime.title_english,
+                anime.title_japanese.clone(),
+            ));
 
-        inserted_ani_list.push(anime.mal_id);
+            inserted_ani_list.push(anime.mal_id);
+        }
 
         if let Some(idx) = ani_chara_list.iter().position(|b| b.mal_id == anime.mal_id) {
             let bridge = ani_chara_list.remove(idx);
@@ -185,36 +180,38 @@ async fn flatten(args: Args, mongo_client: MongoClient) -> anyhow::Result<()> {
                     continue;
                 }
 
-                let img = match chara.images {
+                let image = match chara.images {
                     Some(Images {
                         jpg: Some(ImageUrls { image_url: Some(s) }),
                     }) => {
+                        // None means already exists
                         if args.new_img {
-                            match create_hashed_img(&img_roots, &s, ItemType::Character).await? {
-                                Some(s) => s,
-                                // this None means item already exists, skipping
-                                None => continue,
-                            }
+                            create_hashed_img(&img_roots, &s, ItemType::Character).await?
                         } else {
-                            s
+                            match exists_hashed_img(&img_roots, &s, ItemType::Character).await? {
+                                true => None,
+                                false => Some(s),
+                            }
                         }
                     }
                     _ => continue,
                 };
 
-                batch.push(FlatDocument::new_character(
-                    updated_at,
-                    img,
-                    chara.url,
-                    chara.name,
-                    chara.name_kanji,
-                    Parent {
-                        name: anime.title.clone(),
-                        name_japanese: anime.title_japanese.clone(),
-                    },
-                ));
+                if let Some(img) = image {
+                    batch.push(FlatDocument::new_character(
+                        updated_at,
+                        img,
+                        chara.url,
+                        chara.name,
+                        chara.name_kanji,
+                        Parent {
+                            name: anime.title.clone(),
+                            name_japanese: anime.title_japanese.clone(),
+                        },
+                    ));
 
-                inserted_chara_list.push(chara.mal_id);
+                    inserted_chara_list.push(chara.mal_id);
+                }
             }
         }
 

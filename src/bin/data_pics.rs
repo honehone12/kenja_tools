@@ -1,7 +1,7 @@
 use clap::Parser;
 use futures::TryStreamExt;
 use kenja_tools::{
-    data::{create_new_img, insert_batch, ImgRoots},
+    data::{create_hashed_img, insert_batch, ImgRoots},
     documents::{
         anime_search::{FlatDocument, ItemType},
         anime_src::{AnimeSrc, ImageUrls, ImgExSrc},
@@ -74,7 +74,7 @@ async fn pics(args: Args, mongo_client: MongoClient) -> anyhow::Result<()> {
                 _ => continue,
             };
 
-            let Some(img) = create_new_img(&img_roots, &img_url, ItemType::Anime).await? else {
+            let Some(img) = create_hashed_img(&img_roots, &img_url, ItemType::Anime).await? else {
                 // this None means item already exists, skipping
                 continue;
             };

@@ -1,37 +1,37 @@
-use std::{path::PathBuf, str::FromStr};
-use serde::{Deserialize, Serialize};
-use url::Url;
-use tokio::fs;
-use mongodb::Collection;
-use tracing::{info, warn};
 use crate::documents::anime_search::ItemType;
+use mongodb::Collection;
+use serde::{Deserialize, Serialize};
+use std::{path::PathBuf, str::FromStr};
+use tokio::fs;
+use tracing::{info, warn};
+use url::Url;
 
 const RX: &'static str = "Rx";
 const HENTAI: &'static str = "Hentai";
 
 pub struct ImgRoots<'a> {
     pub raw_img_root: &'a str,
-    pub exist_img_root: &'a str, 
+    pub exist_img_root: &'a str,
     pub new_img_root: &'a str,
 }
 
 #[inline]
 pub fn is_hentai_str(rating_str: &str) -> bool {
-    return rating_str.contains(RX) || rating_str.contains(HENTAI)
+    return rating_str.contains(RX) || rating_str.contains(HENTAI);
 }
 
 #[inline]
 pub fn is_expected_media_type(media_type: &str) -> bool {
     match media_type {
         "TV" | "Movie" | "OVA" | "ONA" => true,
-        _ => false
+        _ => false,
     }
 }
 
 #[inline]
-pub async fn insert_batch<'de, T>(cl: &Collection<T>, batch: &mut Vec<T>) 
--> anyhow::Result<()>
-    where T: Sync + Send + Serialize + Deserialize<'de>
+pub async fn insert_batch<'de, T>(cl: &Collection<T>, batch: &mut Vec<T>) -> anyhow::Result<()>
+where
+    T: Sync + Send + Serialize + Deserialize<'de>,
 {
     let result = cl.insert_many(&*batch).await?;
     info!("inserted {}items", result.inserted_ids.len());
@@ -39,12 +39,11 @@ pub async fn insert_batch<'de, T>(cl: &Collection<T>, batch: &mut Vec<T>)
     Ok(())
 }
 
-pub async fn create_new_img(
+pub async fn create_hashed_img(
     img_roots: &ImgRoots<'_>,
     img_url: &str,
-    item_type: ItemType
+    item_type: ItemType,
 ) -> anyhow::Result<Option<String>> {
-    
     let u = Url::parse(img_url)?;
     let mut p = u.path().to_string();
     p.remove(0);
@@ -54,7 +53,7 @@ pub async fn create_new_img(
         warn!("file {path:?} does not exits");
         return Ok(None);
     }
-    
+
     let hash = blake3::hash(img_url.as_bytes());
     let hash = hash.as_bytes();
     let hex = hex::encode(&hash[..16]);
@@ -62,11 +61,29 @@ pub async fn create_new_img(
     let new_file = format!("preview/{item_type}/{hex}.jpg");
     let new_path = PathBuf::from_str(img_roots.exist_img_root)?.join(&new_file);
     if fs::try_exists(new_path).await? {
-        return Ok(None)
+        return Ok(None);
     }
-    
+
     let new_path = PathBuf::from_str(img_roots.new_img_root)?.join(&new_file);
     fs::copy(path, new_path).await?;
 
     Ok(Some(new_file))
+}
+
+pub async fn exists_hashed_img(
+    img_roots: &ImgRoots<'_>,
+    img_url: &str,
+    item_type: ItemType,
+) -> anyhow::Result<bool> {
+    let hash = blake3::hash(img_url.as_bytes());
+    let hash = hash.as_bytes();
+    let hex = hex::encode(&hash[..16]);
+
+    let file = format!("preview/{item_type}/{hex}.jpg");
+    let path = PathBuf::from_str(img_roots.exist_img_root)?.join(&file);
+    if fs::try_exists(path).await? {
+        return Ok(true);
+    }
+
+    Ok(false)
 }
