@@ -104,7 +104,8 @@ async fn main() -> anyhow::Result<()> {
     let mongo_uri = env::var("MONGO_URI")?;
     let mongo_client = MongoClient::with_uri_str(mongo_uri).await?;
 
-    let http_client = HttpClient::new();
+    let ua = env::var("USER_AGENT")?;
+    let http_client = HttpClient::builder().user_agent(ua).build()?;
 
     img_ex(args, mongo_client, http_client).await
 }
