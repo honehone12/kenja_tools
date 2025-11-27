@@ -59,12 +59,16 @@ pub async fn create_hashed_img(
     let hex = hex::encode(&hash[..16]);
 
     let new_file = format!("preview/{item_type}/{hex}.jpg");
-    let new_path = PathBuf::from_str(img_roots.exist_img_root)?.join(&new_file);
-    if fs::try_exists(new_path).await? {
+    let exist_path = PathBuf::from_str(img_roots.exist_img_root)?.join(&new_file);
+    if fs::try_exists(exist_path).await? {
         return Ok(None);
     }
 
     let new_path = PathBuf::from_str(img_roots.new_img_root)?.join(&new_file);
+    if let Some(dir) = new_path.parent() {
+        fs::create_dir_all(dir).await?;
+    }
+
     fs::copy(path, new_path).await?;
 
     Ok(Some(new_file))
